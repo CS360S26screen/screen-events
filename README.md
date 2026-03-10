@@ -44,7 +44,7 @@ The system interface is designed as a native Android application following **Mat
 
 ## Prototype Access
 * **Interactive Figma Prototype:** [View Live Design & Prototype](https://www.figma.com/design/tQIICpUnr8L6641cflMZ0C/1_1f?node-id=0-1&t=lFUJ7BZwAxbqwnWO-1)
-* **Storyboard:** ![Storyboard](./1_1f_(2).pn)
+* **Storyboard:** ![Storyboard](./1_1f_(2).png)
 
 ---
 
