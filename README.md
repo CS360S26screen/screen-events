@@ -2,7 +2,7 @@
 
 > **Priority Legend:** 🔴 High &nbsp;|&nbsp; 🟡 Medium &nbsp;|&nbsp; 🟢 Low
 
-| #| Requirement | Story Points | Priority |
+| #| User Stories | Story Points | Priority |
 |:-:|---|:-:|:-:|
 | 1 | As a **faculty/staff member**, I want to submit, view, edit, and cancel visitor requests with guest details, purpose, and visit schedule, so that my visitors can enter campus without delays and my records stay accurate. | 8 | 🟡 |
 | 2 | As a **security administrator**, I want to approve or reject submitted visitor requests while the system prevents duplicate entries and confirms successful submissions to users, so that only valid and reviewed requests reach the gate. | 8 | 🟡 |
