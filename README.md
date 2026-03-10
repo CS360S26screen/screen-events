@@ -32,7 +32,8 @@
 | 25 | As a **safety administrator**, I want to trigger emergency mode for the whole campus or a selected building, so that normal access rules are suspended, evacuation is enabled, and emergency responders can operate with accurate occupancy awareness.<br><br>**Acceptance criteria:**<br>• Emergency Mode can be triggered for the whole campus or a single building.<br>• Standard access restrictions are suspended for evacuation routes.<br>• The system generates a Last Known Occupants report for the affected zone. | 13 | 🔴 | 🎯 Full |
 | 26 | As a **guard/safety administrator**, I want the interface to switch to an emergency UI and require a controlled manual reset back to normal mode with full movement auditing, so that emergency operations remain visible, safe, and fully traceable.<br><br>**Acceptance criteria:**<br>• Guard UI highlights evacuation routes and active danger zones during emergency mode.<br>• Returning to normal mode requires a manual reset.<br>• A full audit log of movements during the emergency is generated. | 8 | 🔴 | 🎯 Full |
 
-**---- CRC Card Catalogue ----** <br>
+# CRC Card Catalogue  
+<br>
 <img width="2316" height="1702" alt="CRC_Sheet1" src="https://github.com/user-attachments/assets/f93e1f11-21a2-45d7-8c68-2422e08c0ead" />
 <br>
 <img width="2316" height="1142" alt="CRC_Sheet2" src="https://github.com/user-attachments/assets/11c951c4-d567-445f-9da4-27178ce0e818" />
