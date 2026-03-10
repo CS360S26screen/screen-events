@@ -33,6 +33,11 @@
 | 26 | As a **guard/safety administrator**, I want the interface to switch to an emergency UI and require a controlled manual reset back to normal mode with full movement auditing, so that emergency operations remain visible, safe, and fully traceable.<br><br>**Acceptance criteria:**<br>• Guard UI highlights evacuation routes and active danger zones during emergency mode.<br>• Returning to normal mode requires a manual reset.<br>• A full audit log of movements during the emergency is generated. | 8 | 🔴 | 🎯 Full |
 
 **---- CRC Card Catalogue ----** <br>
+<img width="2316" height="1702" alt="CRC_Sheet1" src="https://github.com/user-attachments/assets/f93e1f11-21a2-45d7-8c68-2422e08c0ead" />
+<br>
+<img width="2316" height="1142" alt="CRC_Sheet2" src="https://github.com/user-attachments/assets/11c951c4-d567-445f-9da4-27178ce0e818" />
+
+
 
 
 
