@@ -38,17 +38,17 @@
 <br>
 <img width="2316" height="1142" alt="CRC_Sheet2" src="https://github.com/user-attachments/assets/11c951c4-d567-445f-9da4-27178ce0e818" />
 
-## Figma & Storyboards
+# Figma & Storyboards
 
 The system interface is designed as a native Android application following **Material Design 3** guidelines. The prototype demonstrates the end-to-end lifecycle of a visitor, from pre-registration to gate check-out.
 
-# Prototype Access
+## Prototype Access
 * **Interactive Figma Prototype:** [View Live Design & Prototype](https://www.figma.com/design/tQIICpUnr8L6641cflMZ0C/1_1f?node-id=0-1&t=lFUJ7BZwAxbqwnWO-1)
-* *Note: Ensure you are in "Prototype" mode in Figma to test the interactive transitions.*
+* **Storyboard:** [Storyboard](./1_1f.pn)
 
 ---
 
-# Core User Journeys (How to Navigate)
+##Core User Journeys (How to Navigate)
 
 1.  **Flow 1: Security Guard Gate & Ad-Hoc Check-In**
     * Covers visitor lookup, dual-credential verification (Vehicle + ID), and real-time ad-hoc host approval requests.
@@ -59,7 +59,7 @@ The system interface is designed as a native Android application following **Mat
 
 ---
 
-# Key UI Features Implemented
+## Key UI Features Implemented
 * **Role-Based Dashboards:** Distinct interfaces for Guards (Utilitarian), Students (Simplified), and Admins (Data-Heavy).
 * **State-Aware UI:** Buttons dynamically toggle based on visitor status (e.g., *Check-In* transforms to *Check-Out*).
 * **Conflict Prevention:** Integrated error states for overbooked guest slots and expired visit windows.
