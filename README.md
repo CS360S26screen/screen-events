@@ -38,6 +38,14 @@
 <br>
 <img width="2316" height="1142" alt="CRC_Sheet2" src="https://github.com/user-attachments/assets/11c951c4-d567-445f-9da4-27178ce0e818" />
 
+# Figma & Storyboards
+Link: https://www.figma.com/design/tQIICpUnr8L6641cflMZ0C/1_1f?node-id=0-1&t=lFUJ7BZwAxbqwnWO-1
+Use the Figma sidebar to switch between the 3 core journeys:
+
+Flow 1: Security Guard Gate & Ad-Hoc Check-In
+Flow 2: Student/Faculty Guest Pass Pre-Registration
+Flow 3: Security Admin Audit
+
 
 
 
