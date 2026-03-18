@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F9FA"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/tvAppTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="64dp"
+        android:text="Visitor Management System"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/design_default_color_primary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="32dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAppTitle">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSubmitRequest"
+            style="@style/Widget.MaterialComponents.Button.Icon"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:text="Faculty Portal"
+            android:textSize="16sp"
+            app:icon="@android:drawable/ic_menu_edit" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStudentRequest"
+            style="@style/Widget.MaterialComponents.Button.Icon"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="16dp"
+            android:text="Student Portal"
+            android:textSize="16sp"
+            app:icon="@android:drawable/ic_menu_myplaces" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnGuardDashboard"
+            style="@style/Widget.MaterialComponents.Button.Icon"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="16dp"
+            android:text="Guard Dashboard"
+            android:textSize="16sp"
+            app:icon="@android:drawable/ic_lock_power_off" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAdminDashboard"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="16dp"
+            android:text="Admin Control Panel"
+            android:textSize="16sp"
+            app:icon="@android:drawable/ic_menu_manage" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
