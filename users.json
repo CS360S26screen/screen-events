@@ -1,0 +1,32 @@
+{
+  "27100283": {
+    "name": "Alice Smith",
+    "email": "alice.smith@campus.edu",
+    "role": "admin",
+    "password": "a123456"
+  },
+  "27100454": {
+    "name": "Bob Johnson",
+    "email": "bob.johnson@campus.edu",
+    "role": "faculty",
+    "password": "f123456"
+  },
+  "27100290": {
+    "name": "Charlie Brown",
+    "email": "charlie.brown@campus.edu",
+    "role": "student",
+    "password": "s123456"
+  },
+  "27100003": {
+    "name": "Diana Miller",
+    "email": "diana.miller@campus.edu",
+    "role": "guard",
+    "password": "g123456"
+  },
+  "27100307": {
+    "name": "Eve Davis",
+    "email": "eve.davis@campus.edu",
+    "role": "student",
+    "password": "s123456"
+  }
+}

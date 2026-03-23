@@ -80,7 +80,7 @@ class StudentRequestActivity : AppCompatActivity() {
             }
             .addOnFailureListener { e ->
                 Log.e("FirestoreError", "Error checking limits", e)
-                Toast.makeText(this, "Error checking limits: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
 
@@ -94,14 +94,14 @@ class StudentRequestActivity : AppCompatActivity() {
             endTime = selectedEndTime,
             hostId = studentRollNo,
             hostType = "student",
-            status = "approved", // Student requests might be auto-approved or pending based on policy
+            status = "pending", // Changed to pending for Admin Hub
             onCampus = false
         )
 
         db.collection("visitor_requests")
             .add(request)
             .addOnSuccessListener {
-                Toast.makeText(this, "Guest Registered Successfully", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Request Submitted for Approval", Toast.LENGTH_SHORT).show()
                 finish()
             }
             .addOnFailureListener { e ->

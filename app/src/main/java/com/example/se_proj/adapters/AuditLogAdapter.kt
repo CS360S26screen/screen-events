@@ -12,7 +12,7 @@ import java.util.Locale
 
 class AuditLogAdapter(
     private var logs: List<AuditLog>,
-    private val isOverstayView: Boolean = false
+    private var isOverstayView: Boolean = false
 ) : RecyclerView.Adapter<AuditLogAdapter.ViewHolder>() {
 
     class ViewHolder(val binding: ItemAuditLogBinding) : RecyclerView.ViewHolder(binding.root)
@@ -39,17 +39,28 @@ class AuditLogAdapter(
             holder.binding.tvReason.visibility = View.GONE
         }
 
-        if (isOverstayView) {
-            holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFCDD2")) // Light red
-        } else {
-            holder.binding.cardView.setCardBackgroundColor(Color.WHITE)
+        // Feature: Color-coded status for Admin visibility
+        when {
+            isOverstayView || log.action == "OVERSTAYING" -> {
+                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFCDD2")) // Red tint
+            }
+            log.action == "Entry" -> {
+                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#C8E6C9")) // Green tint
+            }
+            log.action == "Denied" -> {
+                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFE0B2")) // Orange tint
+            }
+            else -> {
+                holder.binding.cardView.setCardBackgroundColor(Color.WHITE)
+            }
         }
     }
 
     override fun getItemCount() = logs.size
 
-    fun updateData(newLogs: List<AuditLog>) {
+    fun updateData(newLogs: List<AuditLog>, overstay: Boolean = false) {
         logs = newLogs
+        isOverstayView = overstay
         notifyDataSetChanged()
     }
 }

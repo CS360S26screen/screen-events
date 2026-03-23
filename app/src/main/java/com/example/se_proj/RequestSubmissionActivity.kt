@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.se_proj.databinding.ActivityRequestSubmissionBinding
 import com.example.se_proj.models.VisitorRequest
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.firestore
 import java.text.SimpleDateFormat
@@ -22,8 +23,12 @@ class RequestSubmissionActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRequestSubmissionBinding
     private val db = Firebase.firestore
+    private val auth = FirebaseAuth.getInstance()
     private var adHocListener: ListenerRegistration? = null
-    private val facultyId = "FAC-123" // Replace with actual logged-in user ID
+    private var overstayListener: ListenerRegistration? = null
+    
+    private var currentUserId: String = "" // Roll Number/Faculty ID from Firestore
+    private var currentUserName: String = ""
 
     private var selectedDate: String = ""
     private var selectedStartTime: String = ""
@@ -33,6 +38,9 @@ class RequestSubmissionActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityRequestSubmissionBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Load current user profile from Firestore
+        loadUserProfile()
 
         binding.etVisitDate.setOnClickListener { showDatePicker() }
         binding.etStartTime.setOnClickListener { showTimePicker { time -> 
@@ -49,14 +57,29 @@ class RequestSubmissionActivity : AppCompatActivity() {
         binding.btnViewRequests.setOnClickListener {
             startActivity(Intent(this, FacultyRequestsActivity::class.java))
         }
+    }
 
-        startAdHocListener()
-        checkForOverstayingGuests()
+    private fun loadUserProfile() {
+        val uid = auth.currentUser?.uid ?: return
+        db.collection("Users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    currentUserId = doc.id // Using UID as fallback or check rollNumber field
+                    // If your Users doc has a 'rollNumber' or 'facultyId' field, use that for 'hostId'
+                    currentUserId = doc.getString("rollNumber") ?: doc.id
+                    currentUserName = doc.getString("name") ?: ""
+                    
+                    // Now that we have the ID, start listeners
+                    startAdHocListener()
+                    startOverstayListener()
+                }
+            }
     }
 
     private fun startAdHocListener() {
+        if (currentUserId.isEmpty()) return
         adHocListener = db.collection("visitor_requests")
-            .whereEqualTo("hostId", facultyId)
+            .whereEqualTo("hostId", currentUserId)
             .whereEqualTo("status", "pending_adhoc")
             .addSnapshotListener { snapshots, e ->
                 if (e != null) return@addSnapshotListener
@@ -70,27 +93,30 @@ class RequestSubmissionActivity : AppCompatActivity() {
             }
     }
 
-    private fun checkForOverstayingGuests() {
-        val currentTime = Calendar.getInstance()
+    private fun startOverstayListener() {
+        if (currentUserId.isEmpty()) return
         val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
         
-        db.collection("visitor_requests")
-            .whereEqualTo("hostId", facultyId)
+        overstayListener = db.collection("visitor_requests")
+            .whereEqualTo("hostId", currentUserId)
             .whereEqualTo("onCampus", true)
-            .get()
-            .addOnSuccessListener { documents ->
-                for (doc in documents) {
+            .addSnapshotListener { snapshots, e ->
+                if (e != null) return@addSnapshotListener
+                
+                for (doc in snapshots!!) {
                     val request = doc.toObject(VisitorRequest::class.java)
                     try {
-                        val endTime = sdf.parse(request.endTime)
-                        val now = sdf.parse(sdf.format(Date()))
-                        
-                        if (endTime != null && now != null) {
-                            val diff = endTime.time - now.time
-                            val minutesLeft = diff / (1000 * 60)
+                        val endTimeStr = request.endTime
+                        if (endTimeStr.isNotEmpty()) {
+                            val endTime = sdf.parse(endTimeStr)
+                            val now = sdf.parse(sdf.format(Date()))
                             
-                            if (minutesLeft in 0..15) {
-                                showOverstayAlert(request.guestName, request.endTime)
+                            if (endTime != null && now != null) {
+                                val diff = endTime.time - now.time
+                                val minutesLeft = diff / (1000 * 60)
+                                if (minutesLeft in 0..15) {
+                                    showOverstayAlert(request.guestName, request.endTime)
+                                }
                             }
                         }
                     } catch (e: Exception) {
@@ -163,9 +189,10 @@ class RequestSubmissionActivity : AppCompatActivity() {
             visitDate = selectedDate,
             startTime = selectedStartTime,
             endTime = selectedEndTime,
-            hostId = facultyId,
+            hostId = currentUserId, // Use the real ID fetched from Firestore
+            creatorId = auth.currentUser?.uid ?: "", // Required for security rules
             hostType = "faculty",
-            status = "approved" // Pre-approved by faculty
+            status = "pending"
         )
 
         db.collection("visitor_requests")
@@ -183,5 +210,6 @@ class RequestSubmissionActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         adHocListener?.remove()
+        overstayListener?.remove()
     }
 }

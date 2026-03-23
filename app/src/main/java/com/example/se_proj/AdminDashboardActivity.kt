@@ -8,8 +8,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.se_proj.adapters.VisitorRequestAdapter
 import com.example.se_proj.databinding.ActivityAdminDashboardBinding
+import com.example.se_proj.models.AuditLog
 import com.example.se_proj.models.VisitorRequest
 import com.google.firebase.Firebase
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.firestore
 
 class AdminDashboardActivity : AppCompatActivity() {
@@ -36,14 +38,13 @@ class AdminDashboardActivity : AppCompatActivity() {
         adapter = VisitorRequestAdapter(
             requests = emptyList(),
             onApproveClick = { request -> handleApprove(request) },
-            onRejectClick = { request -> updateRequestStatus(request.requestId, "rejected") }
+            onRejectClick = { request -> handleReject(request) }
         )
         binding.rvRequests.layoutManager = LinearLayoutManager(this)
         binding.rvRequests.adapter = adapter
     }
 
     private fun setupSummaryStats() {
-        // Active Guests Count
         db.collection("visitor_requests")
             .whereEqualTo("onCampus", true)
             .addSnapshotListener { snapshots, _ ->
@@ -51,7 +52,6 @@ class AdminDashboardActivity : AppCompatActivity() {
                 binding.tvActiveGuests.text = count.toString()
             }
 
-        // Parking Occupancy
         db.collection("system_metadata").document("parking_status")
             .addSnapshotListener { snapshot, _ ->
                 if (snapshot != null && snapshot.exists()) {
@@ -77,15 +77,32 @@ class AdminDashboardActivity : AppCompatActivity() {
 
     private fun handleApprove(request: VisitorRequest) {
         if (request.requestId.isEmpty()) return
-        updateRequestStatus(request.requestId, "approved")
+        updateRequestStatus(request, "approved")
     }
 
-    private fun updateRequestStatus(requestId: String, newStatus: String) {
-        if (requestId.isEmpty()) return
-        db.collection("visitor_requests").document(requestId)
+    private fun handleReject(request: VisitorRequest) {
+        if (request.requestId.isEmpty()) return
+        updateRequestStatus(request, "rejected")
+    }
+
+    private fun updateRequestStatus(request: VisitorRequest, newStatus: String) {
+        db.collection("visitor_requests").document(request.requestId)
             .update("status", newStatus)
             .addOnSuccessListener {
+                logAdminAction(request, newStatus.uppercase())
                 Toast.makeText(this, "Request ${newStatus.replaceFirstChar { it.uppercase() }}", Toast.LENGTH_SHORT).show()
             }
+    }
+
+    private fun logAdminAction(request: VisitorRequest, action: String) {
+        val log = AuditLog(
+            visitorName = request.guestName,
+            visitorCNIC = request.guestCNIC,
+            hostId = request.hostId,
+            action = "ADMIN_$action",
+            reason = "Action taken by Security Admin",
+            timestamp = Timestamp.now()
+        )
+        db.collection("access_logs").add(log)
     }
 }

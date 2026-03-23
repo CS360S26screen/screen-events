@@ -11,7 +11,8 @@ data class VisitorRequest(
     val visitDate: String = "",
     val startTime: String = "",
     val endTime: String = "",
-    val hostId: String = "",         // Can be Faculty ID or Student Roll Number
+    val hostId: String = "",         // Roll Number/Faculty ID for logic
+    val creatorId: String = "",      // Firebase Auth UID for security rules
     val hostType: String = "faculty", // "faculty" or "student"
     val status: String = "pending",
     val entryTime: String? = null,
