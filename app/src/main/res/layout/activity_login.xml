@@ -115,6 +115,19 @@
             android:textStyle="bold"
             app:cornerRadius="24dp" />
 
+        <!-- Role Select Hint -->
+        <TextView
+            android:id="@+id/tvRoleSelectHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:text="Not your portal? Change Role"
+            android:textColor="@color/campus_blue_primary"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true" />
+
     </LinearLayout>
 
     <!-- Footer Text -->

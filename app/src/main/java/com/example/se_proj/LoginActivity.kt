@@ -24,9 +24,9 @@ class LoginActivity : AppCompatActivity() {
             performLogin()
         }
 
-//        binding.tvRoleSelectHint.setOnClickListener {
-//            startActivity(Intent(this, MainActivity::class.java))
-//        }
+        binding.tvRoleSelectHint.setOnClickListener {
+            startActivity(Intent(this, MainActivity::class.java))
+        }
     }
 
     private fun performLogin() {
