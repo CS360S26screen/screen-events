@@ -2,6 +2,7 @@ package com.example.se_proj
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -31,6 +32,21 @@ class FacultyRequestsActivity : AppCompatActivity() {
         binding = ActivityFacultyRequestsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_logout -> {
+                    FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
+
         setupRecyclerView()
         loadUserProfile()
     }
@@ -38,14 +54,14 @@ class FacultyRequestsActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         adapter = FacultyRequestAdapter(
             requests = emptyList(),
-            onEditClick = { request -> 
+            onEditClick = { request ->
                 if (RequestStatus.canEdit(request.status)) {
                     showEditOptions(request)
                 } else {
                     Toast.makeText(this, "Cannot edit processed requests", Toast.LENGTH_SHORT).show()
                 }
             },
-            onCancelClick = { request -> 
+            onCancelClick = { request ->
                 if (RequestStatus.canCancel(request.status, request.onCampus)) {
                     showCancelConfirmation(request)
                 } else {
@@ -86,7 +102,11 @@ class FacultyRequestsActivity : AppCompatActivity() {
             .whereEqualTo("hostId", facultyId)
             .addSnapshotListener { snapshots, e ->
                 if (e != null) return@addSnapshotListener
-                val list = snapshots?.toObjects(VisitorRequest::class.java) ?: emptyList()
+                val list = snapshots?.documents?.mapNotNull { doc ->
+                    doc.toObject(VisitorRequest::class.java)?.let { request ->
+                        if (request.requestId.isEmpty()) request.copy(requestId = doc.id) else request
+                    }
+                } ?: emptyList()
                 adapter.updateData(list)
             }
     }
@@ -121,6 +141,10 @@ class FacultyRequestsActivity : AppCompatActivity() {
     }
 
     private fun updateRequestField(requestId: String, field: String, value: String) {
+        if (requestId.isEmpty()) {
+            Toast.makeText(this, "Cannot update: request ID missing", Toast.LENGTH_SHORT).show()
+            return
+        }
         db.collection("visitor_requests").document(requestId)
             .update(field, value)
             .addOnSuccessListener {
@@ -129,6 +153,10 @@ class FacultyRequestsActivity : AppCompatActivity() {
     }
 
     private fun showCancelConfirmation(request: VisitorRequest) {
+        if (request.requestId.isEmpty()) {
+            Toast.makeText(this, "Cannot cancel: request ID missing", Toast.LENGTH_SHORT).show()
+            return
+        }
         AlertDialog.Builder(this)
             .setTitle("Cancel Request")
             .setMessage("Are you sure you want to cancel the request for ${request.guestName}?")

@@ -18,6 +18,7 @@ import com.example.se_proj.rules.RequestValidationUtils
 import com.example.se_proj.rules.VisitWindowEvaluator
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.firestore
 import java.time.LocalDate
 import java.time.LocalTime
@@ -40,7 +41,7 @@ class GuardDashboardActivity : AppCompatActivity() {
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_logout -> {
-                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+                    FirebaseAuth.getInstance().signOut()
                     val intent = Intent(this, LoginActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
@@ -50,6 +51,8 @@ class GuardDashboardActivity : AppCompatActivity() {
                 else -> false
             }
         }
+
+        setupParkingCounter()
 
         binding.btnSearchCnic.setOnClickListener {
             val cnic = RequestValidationUtils.normalizeCnic(binding.etSearchCnic.text.toString())
@@ -102,37 +105,35 @@ class GuardDashboardActivity : AppCompatActivity() {
 
         binding.btnParkingPlus.setOnClickListener { updateParking(1) }
         binding.btnParkingMinus.setOnClickListener { updateParking(-1) }
-
-        binding.bottomNavigation.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_logs -> {
-                    startActivity(Intent(this, AdminAuditActivity::class.java))
-                    false
-                }
-                else -> true
-            }
-        }
     }
 
     private fun setupParkingCounter() {
-        db.collection("system_metadata").document("parking_status")
-            .addSnapshotListener { snapshot, e ->
-                if (e != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
-                val occupancy = snapshot.getLong("currentOccupancy") ?: 0
-                val capacity = snapshot.getLong("maxCapacity") ?: 200
-                binding.tvParkingCounter.text = ParkingOccupancyUtils.formatCounter(occupancy, capacity)
-                
-                binding.pbParking.max = capacity.toInt()
-                binding.pbParking.progress = occupancy.toInt()
-                
-                val ratio = ParkingOccupancyUtils.occupancyRatio(occupancy, capacity)
-                val color = when {
-                    ratio > 0.9 -> R.color.status_denied_text
-                    ratio > 0.7 -> android.R.color.holo_orange_dark
-                    else -> R.color.primary_purple
-                }
-                binding.pbParking.setIndicatorColor(ContextCompat.getColor(this, color))
+        val docRef = db.collection("system_metadata").document("parking_status")
+
+        // Ensure the parking document exists
+        docRef.get().addOnSuccessListener { snapshot ->
+            if (!snapshot.exists()) {
+                docRef.set(mapOf("currentOccupancy" to 0L, "maxCapacity" to 200L))
             }
+        }
+
+        docRef.addSnapshotListener { snapshot, e ->
+            if (e != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
+            val occupancy = snapshot.getLong("currentOccupancy") ?: 0
+            val capacity = snapshot.getLong("maxCapacity") ?: 200
+            binding.tvParkingCounter.text = ParkingOccupancyUtils.formatCounter(occupancy, capacity)
+
+            binding.pbParking.max = capacity.toInt()
+            binding.pbParking.progress = occupancy.toInt()
+
+            val ratio = ParkingOccupancyUtils.occupancyRatio(occupancy, capacity)
+            val color = when {
+                ratio > 0.9 -> R.color.status_denied_text
+                ratio > 0.7 -> android.R.color.holo_orange_dark
+                else -> R.color.primary_purple
+            }
+            binding.pbParking.setIndicatorColor(ContextCompat.getColor(this, color))
+        }
     }
 
     private fun searchVisitorByCnic(cnic: String) {
@@ -150,8 +151,8 @@ class GuardDashboardActivity : AppCompatActivity() {
                     binding.tvEmptyState.visibility = View.GONE
                     val doc = snapshots.documents[0]
                     val request = doc.toObject(VisitorRequest::class.java) ?: return@addOnSuccessListener
-                    currentRequest = request
-                    displayResult(request)
+                    currentRequest = if (request.requestId.isEmpty()) request.copy(requestId = doc.id) else request
+                    displayResult(currentRequest!!)
                 }
             }
             .addOnFailureListener {
@@ -174,8 +175,8 @@ class GuardDashboardActivity : AppCompatActivity() {
                     binding.tvEmptyState.visibility = View.GONE
                     val doc = snapshots.documents[0]
                     val request = doc.toObject(VisitorRequest::class.java) ?: return@addOnSuccessListener
-                    currentRequest = request
-                    displayResult(request)
+                    currentRequest = if (request.requestId.isEmpty()) request.copy(requestId = doc.id) else request
+                    displayResult(currentRequest!!)
                 }
             }
             .addOnFailureListener {
@@ -265,10 +266,15 @@ class GuardDashboardActivity : AppCompatActivity() {
         val documentRef = db.collection("system_metadata").document("parking_status")
         db.runTransaction { transaction ->
             val snapshot = transaction.get(documentRef)
-            val currentOccupancy = snapshot.getLong("currentOccupancy") ?: 0
-            val maxCapacity = snapshot.getLong("maxCapacity") ?: 200
-            val updatedOccupancy = ParkingOccupancyUtils.clampOccupancy(currentOccupancy, delta, maxCapacity)
-            transaction.update(documentRef, "currentOccupancy", updatedOccupancy)
+            if (!snapshot.exists()) {
+                val initial = if (delta > 0) delta else 0L
+                transaction.set(documentRef, mapOf("currentOccupancy" to initial, "maxCapacity" to 200L))
+            } else {
+                val currentOccupancy = snapshot.getLong("currentOccupancy") ?: 0
+                val maxCapacity = snapshot.getLong("maxCapacity") ?: 200
+                val updatedOccupancy = ParkingOccupancyUtils.clampOccupancy(currentOccupancy, delta, maxCapacity)
+                transaction.update(documentRef, "currentOccupancy", updatedOccupancy)
+            }
             null
         }.addOnFailureListener { e ->
             Log.e("GuardDashboard", "Parking update failed", e)

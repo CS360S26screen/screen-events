@@ -1,5 +1,6 @@
 package com.example.se_proj
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -10,6 +11,7 @@ import com.example.se_proj.models.VisitorRequest
 import com.example.se_proj.rules.RequestStatus
 import com.example.se_proj.rules.RequestValidationUtils
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.firestore
 import java.text.SimpleDateFormat
@@ -20,12 +22,28 @@ class WalkInRegistrationActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityWalkInRegistrationBinding
     private val db = Firebase.firestore
+    private val auth = FirebaseAuth.getInstance()
     private var listenerRegistration: ListenerRegistration? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityWalkInRegistrationBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_logout -> {
+                    FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
 
         binding.btnSubmitWalkIn.setOnClickListener { submitWalkInRequest() }
     }
@@ -42,6 +60,12 @@ class WalkInRegistrationActivity : AppCompatActivity() {
             return
         }
 
+        val uid = auth.currentUser?.uid
+        if (uid.isNullOrEmpty()) {
+            Toast.makeText(this, "Please log in again", Toast.LENGTH_LONG).show()
+            return
+        }
+
         val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         val currentDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
 
@@ -51,18 +75,18 @@ class WalkInRegistrationActivity : AppCompatActivity() {
             purpose = purpose,
             visitDate = currentDate,
             startTime = currentTime,
-            endTime = "23:59", // Walk-in typically valid for the day
+            endTime = "23:59",
             hostId = hostId,
-            creatorId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "",
+            creatorId = uid,
             hostType = "faculty",
             status = RequestStatus.PENDING_ADHOC,
             onCampus = false
         )
 
         binding.btnSubmitWalkIn.isEnabled = false
-        
+
         db.collection("visitor_requests")
-            .whereEqualTo("creatorId", com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "")
+            .whereEqualTo("creatorId", uid)
             .whereEqualTo("guestCNIC", cnic)
             .whereEqualTo("visitDate", currentDate)
             .get()
@@ -84,11 +108,13 @@ class WalkInRegistrationActivity : AppCompatActivity() {
                     }
                     .addOnFailureListener { e ->
                         binding.btnSubmitWalkIn.isEnabled = true
+                        Log.e("WalkIn", "Failed to send request", e)
                         Toast.makeText(this, "Failed to send request: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
             }
             .addOnFailureListener { e ->
                 binding.btnSubmitWalkIn.isEnabled = true
+                Log.e("WalkIn", "Failed to validate request", e)
                 Toast.makeText(this, "Failed to validate request: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
@@ -110,7 +136,6 @@ class WalkInRegistrationActivity : AppCompatActivity() {
                         binding.tvApprovalStatus.text = "APPROVED! You can now check them in."
                         binding.tvApprovalStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, theme))
                         Toast.makeText(this, "Request Approved!", Toast.LENGTH_LONG).show()
-                        // Optionally auto-close or enable a check-in button here
                     } else if (status == "denied") {
                         binding.tvApprovalStatus.text = "DENIED by Faculty."
                         binding.tvApprovalStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark, theme))

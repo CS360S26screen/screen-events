@@ -86,7 +86,11 @@ class AdminDashboardActivity : AppCompatActivity() {
                     Log.w("AdminDashboard", "Listen failed.", e)
                     return@addSnapshotListener
                 }
-                val pendingList = snapshots?.toObjects(VisitorRequest::class.java) ?: emptyList()
+                val pendingList = snapshots?.documents?.mapNotNull { doc ->
+                    doc.toObject(VisitorRequest::class.java)?.let { request ->
+                        if (request.requestId.isEmpty()) request.copy(requestId = doc.id) else request
+                    }
+                } ?: emptyList()
                 adapter.updateData(pendingList)
             }
     }

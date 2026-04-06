@@ -1,5 +1,6 @@
 package com.example.se_proj
 
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -13,6 +14,7 @@ import com.example.se_proj.models.VisitorRequest
 import com.example.se_proj.rules.AuditLogUtils
 import com.google.android.material.tabs.TabLayout
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import java.time.LocalDateTime
@@ -29,9 +31,20 @@ class AdminAuditActivity : AppCompatActivity() {
         binding = ActivityAdminAuditBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_logout -> {
+                    FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
 
         setupRecyclerView()
         setupTabs()
@@ -87,16 +100,12 @@ class AdminAuditActivity : AppCompatActivity() {
     }
 
     private fun searchLogs(text: String) {
-        // Requirement #12: Search by CNIC or Host ID
-        // Note: Firestore doesn't support OR queries easily with different fields in a simple way without indexes or multiple queries.
-        // For satisfying the requirement "Use .whereEqualTo("visitorCNIC", searchText)", we will perform two searches or filter.
-        
         db.collection("access_logs")
             .whereEqualTo("visitorCNIC", text)
             .get()
             .addOnSuccessListener { snaps1 ->
                 val logs = snaps1.toObjects(AuditLog::class.java).toMutableList()
-                
+
                 db.collection("access_logs")
                     .whereEqualTo("hostId", text)
                     .get()

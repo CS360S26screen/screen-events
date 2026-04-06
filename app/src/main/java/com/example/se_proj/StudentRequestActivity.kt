@@ -2,6 +2,7 @@ package com.example.se_proj
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -37,9 +38,9 @@ class StudentRequestActivity : AppCompatActivity() {
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_logout -> {
-                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
-                    val intent = android.content.Intent(this, LoginActivity::class.java)
-                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     finish()
                     true
@@ -52,11 +53,11 @@ class StudentRequestActivity : AppCompatActivity() {
         loadUserProfile()
 
         binding.etVisitDate.setOnClickListener { showDatePicker() }
-        binding.etStartTime.setOnClickListener { showTimePicker { time -> 
+        binding.etStartTime.setOnClickListener { showTimePicker { time ->
             selectedStartTime = time
             binding.etStartTime.setText(time)
         }}
-        binding.etEndTime.setOnClickListener { showTimePicker { time -> 
+        binding.etEndTime.setOnClickListener { showTimePicker { time ->
             selectedEndTime = time
             binding.etEndTime.setText(time)
         }}
@@ -144,24 +145,9 @@ class StudentRequestActivity : AppCompatActivity() {
             return
         }
 
-        binding.toolbar.setNavigationOnClickListener { finish() }
-        binding.toolbar.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_logout -> {
-                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
-                    val intent = android.content.Intent(this, LoginActivity::class.java)
-                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    finish()
-                    true
-                }
-                else -> false
-            }
-        }
-
         binding.btnSubmit.isEnabled = false
         val uid = auth.currentUser?.uid ?: ""
-        
+
         db.collection("visitor_requests")
             .whereEqualTo("creatorId", uid)
             .get()
@@ -214,15 +200,24 @@ class StudentRequestActivity : AppCompatActivity() {
             .add(request)
             .addOnSuccessListener {
                 Toast.makeText(this, "Request Submitted for Approval", Toast.LENGTH_SHORT).show()
-                val intent = android.content.Intent(this, MainActivity::class.java)
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
-                startActivity(intent)
-                finish()
+                clearForm()
             }
             .addOnFailureListener { e ->
                 binding.btnSubmit.isEnabled = true
                 Log.e("FirestoreError", "Error adding document", e)
                 Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+    }
+
+    private fun clearForm() {
+        binding.etGuestName.text?.clear()
+        binding.etCnic.text?.clear()
+        binding.etVisitDate.text?.clear()
+        binding.etStartTime.text?.clear()
+        binding.etEndTime.text?.clear()
+        selectedDate = ""
+        selectedStartTime = ""
+        selectedEndTime = ""
+        binding.btnSubmit.isEnabled = true
     }
 }

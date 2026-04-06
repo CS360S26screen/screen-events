@@ -30,8 +30,8 @@ class RequestSubmissionActivity : AppCompatActivity() {
     private var adHocListener: ListenerRegistration? = null
     private var overstayListener: ListenerRegistration? = null
     private val shownReminderRequestIds = mutableSetOf<String>()
-    
-    private var currentUserId: String = "" // Roll Number/Faculty ID from Firestore
+
+    private var currentUserId: String = ""
     private var currentUserName: String = ""
 
     private var selectedDate: String = ""
@@ -47,7 +47,7 @@ class RequestSubmissionActivity : AppCompatActivity() {
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_logout -> {
-                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+                    FirebaseAuth.getInstance().signOut()
                     val intent = Intent(this, LoginActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
@@ -62,17 +62,17 @@ class RequestSubmissionActivity : AppCompatActivity() {
         loadUserProfile()
 
         binding.etVisitDate.setOnClickListener { showDatePicker() }
-        binding.etStartTime.setOnClickListener { showTimePicker { time -> 
+        binding.etStartTime.setOnClickListener { showTimePicker { time ->
             selectedStartTime = time
             binding.etStartTime.setText(time)
         }}
-        binding.etEndTime.setOnClickListener { showTimePicker { time -> 
+        binding.etEndTime.setOnClickListener { showTimePicker { time ->
             selectedEndTime = time
             binding.etEndTime.setText(time)
         }}
 
         binding.btnSubmit.setOnClickListener { submitRequest() }
-        
+
         binding.btnViewRequests.setOnClickListener {
             startActivity(Intent(this, FacultyRequestsActivity::class.java))
         }
@@ -85,7 +85,6 @@ class RequestSubmissionActivity : AppCompatActivity() {
             return
         }
 
-        // Try both Document ID and Email search to ensure profile loads
         db.collection("Users").document(uid).get()
             .addOnSuccessListener { doc ->
                 if (doc.exists()) {
@@ -132,7 +131,7 @@ class RequestSubmissionActivity : AppCompatActivity() {
             .whereEqualTo("status", RequestStatus.PENDING_ADHOC)
             .addSnapshotListener { snapshots, e ->
                 if (e != null) return@addSnapshotListener
-                
+
                 for (doc in snapshots?.documentChanges.orEmpty()) {
                     if (doc.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
                         val request = doc.document.toObject(VisitorRequest::class.java)
@@ -248,24 +247,9 @@ class RequestSubmissionActivity : AppCompatActivity() {
             status = RequestStatus.PENDING
         )
 
-        binding.toolbar.setNavigationOnClickListener { finish() }
-        binding.toolbar.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_logout -> {
-                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
-                    val intent = Intent(this, LoginActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    finish()
-                    true
-                }
-                else -> false
-            }
-        }
-
         binding.btnSubmit.isEnabled = false
         val uid = auth.currentUser?.uid ?: ""
-        
+
         db.collection("visitor_requests")
             .whereEqualTo("creatorId", uid)
             .whereEqualTo("guestCNIC", request.guestCNIC)
@@ -301,16 +285,26 @@ class RequestSubmissionActivity : AppCompatActivity() {
             .add(request)
             .addOnSuccessListener {
                 Toast.makeText(this, "Request Submitted Successfully", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, MainActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-                startActivity(intent)
-                finish()
+                clearForm()
             }
             .addOnFailureListener { e ->
                 binding.btnSubmit.isEnabled = true
                 Log.e("FirestoreError", "Error adding document", e)
                 Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+    }
+
+    private fun clearForm() {
+        binding.etGuestName.text?.clear()
+        binding.etCnic.text?.clear()
+        binding.etPurpose.text?.clear()
+        binding.etVisitDate.text?.clear()
+        binding.etStartTime.text?.clear()
+        binding.etEndTime.text?.clear()
+        selectedDate = ""
+        selectedStartTime = ""
+        selectedEndTime = ""
+        binding.btnSubmit.isEnabled = true
     }
 
     override fun onDestroy() {
