@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.se_proj.databinding.ActivityWalkInRegistrationBinding
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.RequestStatus
+import com.example.se_proj.rules.RequestValidationUtils
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.firestore
@@ -31,11 +33,12 @@ class WalkInRegistrationActivity : AppCompatActivity() {
     private fun submitWalkInRequest() {
         val hostId = binding.etHostId.text.toString().trim()
         val name = binding.etGuestName.text.toString().trim()
-        val cnic = binding.etCnic.text.toString().trim()
+        val cnic = RequestValidationUtils.normalizeCnic(binding.etCnic.text.toString())
         val purpose = binding.etPurpose.text.toString().trim()
 
-        if (hostId.isEmpty() || name.isEmpty() || cnic.isEmpty() || purpose.isEmpty()) {
-            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
+        val validation = RequestValidationUtils.validateWalkInRequest(hostId, name, cnic, purpose)
+        if (!validation.isValid) {
+            Toast.makeText(this, validation.message, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -50,22 +53,43 @@ class WalkInRegistrationActivity : AppCompatActivity() {
             startTime = currentTime,
             endTime = "23:59", // Walk-in typically valid for the day
             hostId = hostId,
+            creatorId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "",
             hostType = "faculty",
-            status = "pending_adhoc",
+            status = RequestStatus.PENDING_ADHOC,
             onCampus = false
         )
 
         binding.btnSubmitWalkIn.isEnabled = false
         
         db.collection("visitor_requests")
-            .add(request)
-            .addOnSuccessListener { documentReference ->
-                Toast.makeText(this, "Request sent to Faculty for approval", Toast.LENGTH_SHORT).show()
-                listenForApproval(documentReference.id)
+            .whereEqualTo("creatorId", com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "")
+            .whereEqualTo("guestCNIC", cnic)
+            .whereEqualTo("visitDate", currentDate)
+            .get()
+            .addOnSuccessListener { documents ->
+                val hasDuplicate = documents.toObjects(VisitorRequest::class.java).any {
+                    RequestValidationUtils.matchesDuplicateCandidate(it, hostId, cnic, currentDate)
+                }
+                if (hasDuplicate) {
+                    binding.btnSubmitWalkIn.isEnabled = true
+                    Toast.makeText(this, "A walk-in request already exists for this guest today", Toast.LENGTH_LONG).show()
+                    return@addOnSuccessListener
+                }
+
+                db.collection("visitor_requests")
+                    .add(request)
+                    .addOnSuccessListener { documentReference ->
+                        Toast.makeText(this, "Request sent to Faculty for approval", Toast.LENGTH_SHORT).show()
+                        listenForApproval(documentReference.id)
+                    }
+                    .addOnFailureListener { e ->
+                        binding.btnSubmitWalkIn.isEnabled = true
+                        Toast.makeText(this, "Failed to send request: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
             }
             .addOnFailureListener { e ->
                 binding.btnSubmitWalkIn.isEnabled = true
-                Toast.makeText(this, "Failed to send request: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Failed to validate request: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
 

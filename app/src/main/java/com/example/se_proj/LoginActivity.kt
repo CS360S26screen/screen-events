@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.se_proj.databinding.ActivityLoginBinding
+import com.example.se_proj.rules.LoginInputUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -33,68 +34,122 @@ class LoginActivity : AppCompatActivity() {
         val inputId = binding.etUserId.text.toString().trim()
         val password = binding.etPassword.text.toString().trim()
 
-        if (inputId.isEmpty() || password.isEmpty()) {
+        if (!LoginInputUtils.hasCredentials(inputId, password)) {
             Toast.makeText(this, "Please enter credentials", Toast.LENGTH_SHORT).show()
             return
         }
 
-        binding.btnLogin.isEnabled = false
-        binding.btnLogin.text = "Authenticating..."
-
-        val email = if (!inputId.contains("@")) "$inputId@campus.edu" else inputId
+        setLoginInProgress(true)
+        val email = LoginInputUtils.normalizeEmail(inputId)
 
         auth.signInWithEmailAndPassword(email, password)
             .addOnSuccessListener { authResult ->
                 val uid = authResult.user?.uid
                 if (uid != null) {
                     fetchUserRoleAndRedirect(uid)
+                } else {
+                    setLoginInProgress(false)
+                    Log.e("Auth", "Authenticated user did not return a UID")
+                    Toast.makeText(this, "Auth Failed: user record missing", Toast.LENGTH_LONG).show()
                 }
             }
             .addOnFailureListener { e ->
-                binding.btnLogin.isEnabled = true
-                binding.btnLogin.text = "Secure Login"
+                setLoginInProgress(false)
                 Log.e("Auth", "Login failed for $email", e)
                 Toast.makeText(this, "Auth Failed: ${e.message}", Toast.LENGTH_LONG).show()
             }
     }
 
     private fun fetchUserRoleAndRedirect(uid: String) {
-        // Updated to use "Users" with a capital 'U' as per your Firestore setup
+        val userEmail = auth.currentUser?.email
+        
+        // 1. Try finding document by UID (Standard Firebase way that Rules expect)
         db.collection("Users").document(uid).get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
-                    val role = document.getString("role")?.lowercase()
-                    val name = document.getString("name")
-                    Toast.makeText(this, "Welcome $name", Toast.LENGTH_SHORT).show()
-                    
-                    val intent = when (role) {
-                        "admin" -> Intent(this, AdminDashboardActivity::class.java)
-                        "guard" -> Intent(this, GuardDashboardActivity::class.java)
-                        "faculty" -> Intent(this, RequestSubmissionActivity::class.java)
-                        "student" -> Intent(this, StudentRequestActivity::class.java)
-                        else -> {
-                            Log.e("Auth", "Role '$role' not recognized")
-                            Toast.makeText(this, "Access Denied: Role '$role' not recognized", Toast.LENGTH_LONG).show()
-                            null
-                        }
-                    }
-                    
-                    intent?.let {
-                        startActivity(it)
-                        finish()
-                    }
+                    processUserDocument(document.id, document.data)
+                } else if (userEmail != null) {
+                    // 2. Fallback: Search by email and "Link" the account so Rules work
+                    linkProfileByEmail(userEmail, uid)
                 } else {
-                    binding.btnLogin.isEnabled = true
-                    binding.btnLogin.text = "Secure Login"
-                    Log.e("Auth", "Document not found in 'Users' collection for UID: $uid")
-                    Toast.makeText(this, "User details not found (Check 'Users' collection)", Toast.LENGTH_LONG).show()
+                    handleUserNotFound(uid)
                 }
             }
             .addOnFailureListener { e ->
-                binding.btnLogin.isEnabled = true
-                binding.btnLogin.text = "Secure Login"
+                setLoginInProgress(false)
                 Log.e("Auth", "Firestore fetch failed", e)
                 Toast.makeText(this, "Database Error: ${e.message}", Toast.LENGTH_LONG).show()
             }
+    }
+
+    private fun linkProfileByEmail(email: String, uid: String) {
+        db.collection("Users").whereEqualTo("email", email).get()
+            .addOnSuccessListener { query ->
+                if (!query.isEmpty) {
+                    val existingDoc = query.documents[0]
+                    val userData = existingDoc.data?.toMutableMap() ?: mutableMapOf()
+                    
+                    // Ensure the Roll Number or Faculty ID is preserved in the new document
+                    val role = userData["role"]?.toString()?.lowercase() ?: ""
+                    if (role == "student" && !userData.containsKey("rollNumber")) {
+                        userData["rollNumber"] = existingDoc.id
+                    } else if ((role == "faculty" || role == "admin") && !userData.containsKey("facultyId")) {
+                        userData["facultyId"] = existingDoc.id
+                    }
+                    
+                    // Create the UID-based document that Security Rules expect
+                    db.collection("Users").document(uid).set(userData)
+                        .addOnSuccessListener {
+                            Log.d("Auth", "Profile linked successfully for $uid with ID ${existingDoc.id}")
+                            processUserDocument(uid, userData)
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e("Auth", "Failed to link profile", e)
+                            processUserDocument(existingDoc.id, userData)
+                        }
+                } else {
+                    handleUserNotFound(email)
+                }
+            }
+            .addOnFailureListener { e ->
+                setLoginInProgress(false)
+                Toast.makeText(this, "Search failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+    }
+
+    private fun processUserDocument(docId: String, data: Map<String, Any>?) {
+        val role = data?.get("role")?.toString()?.lowercase() ?: ""
+        val name = data?.get("name")?.toString() ?: "User"
+        
+        Toast.makeText(this, "Welcome $name", Toast.LENGTH_SHORT).show()
+        
+        val intent = when (role) {
+            "admin" -> Intent(this, AdminDashboardActivity::class.java)
+            "guard" -> Intent(this, GuardDashboardActivity::class.java)
+            "faculty" -> Intent(this, RequestSubmissionActivity::class.java)
+            "student" -> Intent(this, StudentRequestActivity::class.java)
+            else -> {
+                setLoginInProgress(false)
+                Log.e("Auth", "Role '$role' not recognized for user $docId")
+                Toast.makeText(this, "Access Denied: Role '$role' not recognized", Toast.LENGTH_LONG).show()
+                null
+            }
+        }
+        
+        intent?.let {
+            startActivity(it)
+            finish()
+        }
+    }
+
+    private fun handleUserNotFound(identifier: String) {
+        setLoginInProgress(false)
+        Log.e("Auth", "User profile not found for: $identifier")
+        Toast.makeText(this, "Profile not found in 'Users' collection. Ensure document exists.", Toast.LENGTH_LONG).show()
+    }
+
+    private fun setLoginInProgress(inProgress: Boolean) {
+        binding.btnLogin.isEnabled = !inProgress
+        binding.btnLogin.text = if (inProgress) "Authenticating..." else "Secure Login"
     }
 }

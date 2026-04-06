@@ -16,7 +16,8 @@
             android:layout_height="?attr/actionBarSize"
             app:title="Faculty Portal"
             app:titleCentered="true"
-            app:navigationIcon="@android:drawable/ic_menu_edit" />
+            app:navigationIcon="@android:drawable/ic_menu_edit"
+            app:menu="@menu/top_app_bar" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView

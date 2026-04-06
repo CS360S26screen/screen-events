@@ -1,5 +1,6 @@
 package com.example.se_proj
 
+import android.util.Log
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
@@ -11,11 +12,15 @@ import androidx.core.content.ContextCompat
 import com.example.se_proj.databinding.ActivityGuardDashboardBinding
 import com.example.se_proj.models.AuditLog
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.ParkingOccupancyUtils
+import com.example.se_proj.rules.RequestStatus
+import com.example.se_proj.rules.RequestValidationUtils
+import com.example.se_proj.rules.VisitWindowEvaluator
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.firestore
+import java.time.LocalDate
+import java.time.LocalTime
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -25,17 +30,29 @@ class GuardDashboardActivity : AppCompatActivity() {
     private lateinit var binding: ActivityGuardDashboardBinding
     private val db = Firebase.firestore
     private var currentRequest: VisitorRequest? = null
-    private var searchListener: ListenerRegistration? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityGuardDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setupParkingCounter()
+        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_logout -> {
+                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
 
         binding.btnSearchCnic.setOnClickListener {
-            val cnic = binding.etSearchCnic.text.toString().trim()
+            val cnic = RequestValidationUtils.normalizeCnic(binding.etSearchCnic.text.toString())
             if (cnic.isNotEmpty()) {
                 searchVisitorByCnic(cnic)
             } else {
@@ -103,12 +120,12 @@ class GuardDashboardActivity : AppCompatActivity() {
                 if (e != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
                 val occupancy = snapshot.getLong("currentOccupancy") ?: 0
                 val capacity = snapshot.getLong("maxCapacity") ?: 200
-                binding.tvParkingCounter.text = "$occupancy / $capacity"
+                binding.tvParkingCounter.text = ParkingOccupancyUtils.formatCounter(occupancy, capacity)
                 
                 binding.pbParking.max = capacity.toInt()
                 binding.pbParking.progress = occupancy.toInt()
                 
-                val ratio = occupancy.toFloat() / capacity
+                val ratio = ParkingOccupancyUtils.occupancyRatio(occupancy, capacity)
                 val color = when {
                     ratio > 0.9 -> R.color.status_denied_text
                     ratio > 0.7 -> android.R.color.holo_orange_dark
@@ -119,48 +136,50 @@ class GuardDashboardActivity : AppCompatActivity() {
     }
 
     private fun searchVisitorByCnic(cnic: String) {
-        searchListener?.remove()
-        searchListener = db.collection("visitor_requests")
+        db.collection("visitor_requests")
             .whereEqualTo("guestCNIC", cnic)
-            .whereEqualTo("status", "approved")
-            .addSnapshotListener { snapshots, e ->
-                if (e != null) return@addSnapshotListener
+            .whereEqualTo("status", RequestStatus.APPROVED)
+            .get()
+            .addOnSuccessListener { snapshots ->
                 if (snapshots == null || snapshots.isEmpty) {
+                    currentRequest = null
                     binding.cvResult.visibility = View.GONE
                     binding.tvEmptyState.visibility = View.VISIBLE
                     binding.tvEmptyState.text = "No approved request found for this CNIC."
                 } else {
                     binding.tvEmptyState.visibility = View.GONE
                     val doc = snapshots.documents[0]
-                    val request = doc.toObject(VisitorRequest::class.java)
-                    if (request != null) {
-                        currentRequest = request
-                        displayResult(request)
-                    }
+                    val request = doc.toObject(VisitorRequest::class.java) ?: return@addOnSuccessListener
+                    currentRequest = request
+                    displayResult(request)
                 }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Unable to search visitor right now", Toast.LENGTH_SHORT).show()
             }
     }
 
     private fun searchCurrentVisitorsByHost(hostId: String) {
-        searchListener?.remove()
-        searchListener = db.collection("visitor_requests")
+        db.collection("visitor_requests")
             .whereEqualTo("hostId", hostId)
             .whereEqualTo("onCampus", true)
-            .addSnapshotListener { snapshots, e ->
-                if (e != null) return@addSnapshotListener
+            .get()
+            .addOnSuccessListener { snapshots ->
                 if (snapshots == null || snapshots.isEmpty) {
+                    currentRequest = null
                     binding.cvResult.visibility = View.GONE
                     binding.tvEmptyState.visibility = View.VISIBLE
                     binding.tvEmptyState.text = "No guests currently on campus for this Host ID."
                 } else {
                     binding.tvEmptyState.visibility = View.GONE
                     val doc = snapshots.documents[0]
-                    val request = doc.toObject(VisitorRequest::class.java)
-                    if (request != null) {
-                        currentRequest = request
-                        displayResult(request)
-                    }
+                    val request = doc.toObject(VisitorRequest::class.java) ?: return@addOnSuccessListener
+                    currentRequest = request
+                    displayResult(request)
                 }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Unable to search host records right now", Toast.LENGTH_SHORT).show()
             }
     }
 
@@ -170,44 +189,24 @@ class GuardDashboardActivity : AppCompatActivity() {
         binding.tvHostInfo.text = "Host ID: ${request.hostId} (${request.hostType})"
         binding.tvTimeWindow.text = "${request.visitDate} | ${request.startTime} - ${request.endTime}"
 
-        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-        val currentDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+        val decision = VisitWindowEvaluator.evaluate(request, LocalDate.now(), LocalTime.now())
+        binding.tvStatus.text = decision.message
+        binding.btnAction.text = decision.actionText
+        binding.btnAction.isEnabled = decision.isActionEnabled
+        binding.btnOverride.visibility = if (decision.isOverrideVisible) View.VISIBLE else View.GONE
 
-        binding.btnOverride.visibility = View.GONE
-
-        if (request.onCampus) {
-            setChipStatus("INSIDE", R.color.status_approved_bg, R.color.status_approved_text)
-            binding.tvStatus.text = "Currently On Campus"
-            binding.btnAction.text = "Check-Out"
-            binding.btnAction.isEnabled = true
-        } else {
-            if (request.visitDate != currentDate) {
-                setChipStatus("WRONG DATE", R.color.status_denied_bg, R.color.status_denied_text)
-                binding.tvStatus.text = "Visit scheduled for ${request.visitDate}"
-                binding.btnAction.text = "Check-In"
-                binding.btnAction.isEnabled = false
-                binding.btnOverride.visibility = View.VISIBLE
-                logAudit(request, "Denied", "Wrong Date")
-            } else if (currentTime < request.startTime) {
-                setChipStatus("TOO EARLY", R.color.status_denied_bg, R.color.status_denied_text)
-                binding.tvStatus.text = "Entry allowed after ${request.startTime}"
-                binding.btnAction.text = "Check-In"
-                binding.btnAction.isEnabled = false
-                binding.btnOverride.visibility = View.VISIBLE
-                logAudit(request, "Denied", "Early Arrival")
-            } else if (currentTime > request.endTime) {
-                setChipStatus("EXPIRED", R.color.status_denied_bg, R.color.status_denied_text)
-                binding.tvStatus.text = "Visit window expired at ${request.endTime}"
-                binding.btnAction.text = "Check-In"
-                binding.btnAction.isEnabled = false
-                binding.btnOverride.visibility = View.VISIBLE
-                logAudit(request, "Denied", "Expired Window")
-            } else {
-                setChipStatus("AUTHORIZED", R.color.status_approved_bg, R.color.status_approved_text)
-                binding.tvStatus.text = "Authorized for Entry"
-                binding.btnAction.text = "Check-In"
-                binding.btnAction.isEnabled = true
+        when (decision.state) {
+            VisitWindowEvaluator.VisitWindowState.INSIDE,
+            VisitWindowEvaluator.VisitWindowState.AUTHORIZED -> {
+                setChipStatus(decision.label, R.color.status_approved_bg, R.color.status_approved_text)
             }
+            else -> {
+                setChipStatus(decision.label, R.color.status_denied_bg, R.color.status_denied_text)
+            }
+        }
+
+        if (decision.shouldLogDeniedAccess()) {
+            logAudit(request, "Denied", decision.deniedReason)
         }
     }
 
@@ -263,12 +262,17 @@ class GuardDashboardActivity : AppCompatActivity() {
     }
 
     private fun updateParking(delta: Long) {
-        db.collection("system_metadata").document("parking_status")
-            .update("currentOccupancy", FieldValue.increment(delta))
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        searchListener?.remove()
+        val documentRef = db.collection("system_metadata").document("parking_status")
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(documentRef)
+            val currentOccupancy = snapshot.getLong("currentOccupancy") ?: 0
+            val maxCapacity = snapshot.getLong("maxCapacity") ?: 200
+            val updatedOccupancy = ParkingOccupancyUtils.clampOccupancy(currentOccupancy, delta, maxCapacity)
+            transaction.update(documentRef, "currentOccupancy", updatedOccupancy)
+            null
+        }.addOnFailureListener { e ->
+            Log.e("GuardDashboard", "Parking update failed", e)
+            Toast.makeText(this, "Unable to update parking occupancy: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 }

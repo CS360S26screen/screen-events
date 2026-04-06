@@ -10,6 +10,7 @@ import com.example.se_proj.adapters.VisitorRequestAdapter
 import com.example.se_proj.databinding.ActivityAdminDashboardBinding
 import com.example.se_proj.models.AuditLog
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.RequestStatus
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.firestore
@@ -24,6 +25,21 @@ class AdminDashboardActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityAdminDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_logout -> {
+                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
 
         setupRecyclerView()
         setupSummaryStats()
@@ -64,7 +80,7 @@ class AdminDashboardActivity : AppCompatActivity() {
 
     private fun fetchPendingRequests() {
         db.collection("visitor_requests")
-            .whereEqualTo("status", "pending")
+            .whereEqualTo("status", RequestStatus.PENDING)
             .addSnapshotListener { snapshots, e ->
                 if (e != null) {
                     Log.w("AdminDashboard", "Listen failed.", e)
@@ -77,12 +93,12 @@ class AdminDashboardActivity : AppCompatActivity() {
 
     private fun handleApprove(request: VisitorRequest) {
         if (request.requestId.isEmpty()) return
-        updateRequestStatus(request, "approved")
+        updateRequestStatus(request, RequestStatus.APPROVED)
     }
 
     private fun handleReject(request: VisitorRequest) {
         if (request.requestId.isEmpty()) return
-        updateRequestStatus(request, "rejected")
+        updateRequestStatus(request, RequestStatus.REJECTED)
     }
 
     private fun updateRequestStatus(request: VisitorRequest, newStatus: String) {
@@ -91,6 +107,10 @@ class AdminDashboardActivity : AppCompatActivity() {
             .addOnSuccessListener {
                 logAdminAction(request, newStatus.uppercase())
                 Toast.makeText(this, "Request ${newStatus.replaceFirstChar { it.uppercase() }}", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener { error ->
+                Log.e("AdminDashboard", "Failed to update request status", error)
+                Toast.makeText(this, "Failed to update request", Toast.LENGTH_SHORT).show()
             }
     }
 

@@ -10,13 +10,12 @@ import com.example.se_proj.adapters.AuditLogAdapter
 import com.example.se_proj.databinding.ActivityAdminAuditBinding
 import com.example.se_proj.models.AuditLog
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.AuditLogUtils
 import com.google.android.material.tabs.TabLayout
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.time.LocalDateTime
 
 class AdminAuditActivity : AppCompatActivity() {
 
@@ -29,6 +28,10 @@ class AdminAuditActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityAdminAuditBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.toolbar.setNavigationOnClickListener { finish() }
 
         setupRecyclerView()
         setupTabs()
@@ -98,32 +101,26 @@ class AdminAuditActivity : AppCompatActivity() {
                     .whereEqualTo("hostId", text)
                     .get()
                     .addOnSuccessListener { snaps2 ->
-                        logs.addAll(snaps2.toObjects(AuditLog::class.java))
-                        adapter.updateData(logs.distinctBy { it.id }.sortedByDescending { it.timestamp })
+                        val mergedLogs = AuditLogUtils.mergeAndSortDistinct(
+                            logs,
+                            snaps2.toObjects(AuditLog::class.java)
+                        )
+                        adapter.updateData(mergedLogs)
                     }
             }
     }
 
     private fun fetchOverstaying() {
-        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        val now = LocalDateTime.now()
         db.collection("visitor_requests")
             .whereEqualTo("onCampus", true)
             .get()
             .addOnSuccessListener { snapshots ->
                 val overstayingRequests = snapshots?.toObjects(VisitorRequest::class.java) ?: emptyList()
-                val filteredOverstaying = overstayingRequests.filter { it.endTime < currentTime }
-                
-                val mappedLogs = filteredOverstaying.map { 
-                    AuditLog(
-                        visitorName = it.guestName,
-                        visitorCNIC = it.guestCNIC,
-                        hostId = it.hostId,
-                        action = "OVERSTAYING",
-                        reason = "Scheduled exit: ${it.endTime}"
-                    )
-                }
-                adapter = AuditLogAdapter(mappedLogs, isOverstayView = true)
-                binding.rvAuditLogs.adapter = adapter
+                val mappedLogs = overstayingRequests
+                    .filter { AuditLogUtils.isOverstaying(it, now) }
+                    .map { AuditLogUtils.toOverstayAuditLog(it) }
+                adapter.updateData(mappedLogs, overstay = true)
             }
     }
 }

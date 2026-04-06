@@ -7,8 +7,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.se_proj.databinding.ItemAuditLogBinding
 import com.example.se_proj.models.AuditLog
-import java.text.SimpleDateFormat
-import java.util.Locale
+import com.example.se_proj.rules.UiFormatUtils
 
 class AuditLogAdapter(
     private var logs: List<AuditLog>,
@@ -28,9 +27,7 @@ class AuditLogAdapter(
         holder.binding.tvCnic.text = "CNIC: ${log.visitorCNIC}"
         holder.binding.tvAction.text = "Action: ${log.action}"
         holder.binding.tvHostId.text = "Host ID: ${log.hostId}"
-        
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        holder.binding.tvTimestamp.text = sdf.format(log.timestamp.toDate())
+        holder.binding.tvTimestamp.text = UiFormatUtils.formatAuditTimestamp(log.timestamp)
 
         if (log.reason.isNotEmpty()) {
             holder.binding.tvReason.visibility = View.VISIBLE
@@ -39,18 +36,17 @@ class AuditLogAdapter(
             holder.binding.tvReason.visibility = View.GONE
         }
 
-        // Feature: Color-coded status for Admin visibility
-        when {
-            isOverstayView || log.action == "OVERSTAYING" -> {
+        when (UiFormatUtils.resolveAuditVisualState(log.action, isOverstayView)) {
+            UiFormatUtils.AuditVisualState.OVERSTAYING -> {
                 holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFCDD2")) // Red tint
             }
-            log.action == "Entry" -> {
+            UiFormatUtils.AuditVisualState.ENTRY -> {
                 holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#C8E6C9")) // Green tint
             }
-            log.action == "Denied" -> {
+            UiFormatUtils.AuditVisualState.DENIED -> {
                 holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFE0B2")) // Orange tint
             }
-            else -> {
+            UiFormatUtils.AuditVisualState.DEFAULT -> {
                 holder.binding.cardView.setCardBackgroundColor(Color.WHITE)
             }
         }

@@ -8,6 +8,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.se_proj.R
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.UiFormatUtils
 
 class VisitorRequestAdapter(
     private var requests: List<VisitorRequest>,
@@ -33,7 +34,7 @@ class VisitorRequestAdapter(
         val request = requests[position]
         holder.tvGuestName.text = request.guestName
         holder.tvPurpose.text = request.purpose
-        holder.tvDate.text = "Date: ${request.visitDate}"
+        holder.tvDate.text = UiFormatUtils.formatVisitorDate(request.visitDate)
 
         holder.btnApprove.setOnClickListener { onApproveClick(request) }
         holder.btnReject.setOnClickListener { onRejectClick(request) }
