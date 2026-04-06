@@ -5,71 +5,115 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8F9FA"
+    android:background="@color/background_light"
+    android:padding="24dp"
     tools:context=".MainActivity">
+
+    <!-- Logo Placeholder -->
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/ivMainLogo"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginTop="60dp"
+        android:padding="2dp"
+        android:scaleType="centerCrop"
+        android:src="@android:drawable/sym_def_app_icon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+        app:strokeColor="@color/border_color"
+        app:strokeWidth="1dp" />
 
     <TextView
         android:id="@+id/tvAppTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="64dp"
-        android:text="Visitor Management System"
-        android:textSize="24sp"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:text="Campus Gate\nAccess System"
+        android:textColor="@color/text_color_primary"
+        android:textSize="28sp"
         android:textStyle="bold"
-        android:textColor="@color/design_default_color_primary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/ivMainLogo" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="32dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginTop="48dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvAppTitle">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSubmitRequest"
-            style="@style/Widget.MaterialComponents.Button.Icon"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/campus_blue_primary"
+            android:paddingVertical="14dp"
             android:text="Faculty Portal"
-            android:textSize="16sp"
-            app:icon="@android:drawable/ic_menu_edit" />
+            android:textAllCaps="false"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:cornerRadius="24dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStudentRequest"
-            style="@style/Widget.MaterialComponents.Button.Icon"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:backgroundTint="@color/campus_blue_primary"
+            android:paddingVertical="14dp"
             android:text="Student Portal"
-            android:textSize="16sp"
-            app:icon="@android:drawable/ic_menu_myplaces" />
+            android:textAllCaps="false"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:cornerRadius="24dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGuardDashboard"
-            style="@style/Widget.MaterialComponents.Button.Icon"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:backgroundTint="@color/campus_blue_primary"
+            android:paddingVertical="14dp"
             android:text="Guard Dashboard"
-            android:textSize="16sp"
-            app:icon="@android:drawable/ic_lock_power_off" />
+            android:textAllCaps="false"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:cornerRadius="24dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAdminDashboard"
-            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:paddingVertical="14dp"
             android:text="Admin Control Panel"
-            android:textSize="16sp"
-            app:icon="@android:drawable/ic_menu_manage" />
+            android:textAllCaps="false"
+            android:textColor="@color/campus_blue_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:cornerRadius="24dp"
+            app:strokeColor="@color/campus_blue_primary" />
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvFooter"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:gravity="center"
+        android:text="Select your portal to continue"
+        android:textColor="@color/text_color_secondary"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

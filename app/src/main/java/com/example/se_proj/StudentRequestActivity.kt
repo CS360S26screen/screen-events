@@ -27,24 +27,14 @@ class StudentRequestActivity : AppCompatActivity() {
         binding = ActivityStudentRequestBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.etVisitDate.setOnClickListener { showDatePicker() }
-        binding.etStartTime.setOnClickListener { showTimePicker { time -> 
-            selectedStartTime = time
-            binding.etStartTime.setText(time)
-        }}
-        binding.etEndTime.setOnClickListener { showTimePicker { time -> 
-            selectedEndTime = time
-            binding.etEndTime.setText(time)
-        }}
 
-        binding.btnSubmit.setOnClickListener { checkLimitAndSubmit() }
     }
 
     private fun showDatePicker() {
         val calendar = Calendar.getInstance()
         DatePickerDialog(this, { _, year, month, dayOfMonth ->
             selectedDate = String.format(Locale.getDefault(), "%02d/%02d/%d", dayOfMonth, month + 1, year)
-            binding.etVisitDate.setText(selectedDate)
+            // binding.etVisitDate.setText(selectedDate) // Needs to exist in XML
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
     }
 
@@ -60,7 +50,7 @@ class StudentRequestActivity : AppCompatActivity() {
         val name = binding.etGuestName.text.toString().trim()
         val cnic = binding.etCnic.text.toString().trim()
 
-        if (name.isEmpty() || cnic.isEmpty() || selectedDate.isEmpty() || selectedStartTime.isEmpty() || selectedEndTime.isEmpty()) {
+        if (name.isEmpty() || cnic.isEmpty() || selectedStartTime.isEmpty() || selectedEndTime.isEmpty()) {
             Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
             return
         }
@@ -89,12 +79,12 @@ class StudentRequestActivity : AppCompatActivity() {
             guestName = name,
             guestCNIC = cnic,
             purpose = "Student Guest Visit",
-            visitDate = selectedDate,
+            visitDate = selectedDate.ifEmpty { "Today" }, // Fallback if date is not selected
             startTime = selectedStartTime,
             endTime = selectedEndTime,
             hostId = studentRollNo,
             hostType = "student",
-            status = "pending", // Changed to pending for Admin Hub
+            status = "pending",
             onCampus = false
         )
 
