@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="campus_blue_primary">#0056D2</color>
+    <color name="campus_blue_light">#D3E3FD</color>
+    <color name="status_present_green">#34A853</color>
+    <color name="status_alert_red">#EA4335</color>
+    <color name="status_pending_orange">#FBBC05</color>
+    <color name="text_color_primary">#1D1B20</color>
+    <color name="text_color_secondary">#79747E</color>
+    <color name="border_color">#CAC4D0</color>
+    <color name="background_light">#FFFFFF</color>
+    <color name="background_dark">#000000</color>
+
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
@@ -26,4 +37,7 @@
     <color name="status_approved_text">#1B5E20</color>
     <color name="status_denied_bg">#FFEBEE</color>
     <color name="status_denied_text">#B71C1C</color>
+
+    <color name="nav_active_bg">#D3E3FD</color>
+    <color name="nav_inactive_icon">#444746</color>
 </resources>

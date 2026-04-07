@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_new_pass"
+        android:icon="@drawable/guest_pass"
+        android:title="New Pass" />
+    <item
+        android:id="@+id/nav_my_guests"
+        android:icon="@drawable/my_guests"
+        android:title="My Guests" />
+    <item
+        android:id="@+id/nav_profile"
+        android:icon="@drawable/profile_icon"
+        android:title="Profile" />
+</menu>
