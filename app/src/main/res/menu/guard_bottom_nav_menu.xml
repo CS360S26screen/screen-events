@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/home_icon"
+        android:title="Home" />
+    <item
+        android:id="@+id/nav_logs"
+        android:icon="@drawable/logs_icon"
+        android:title="Logs" />
+    <item
+        android:id="@+id/nav_adhoc"
+        android:icon="@drawable/adhoc_icon"
+        android:title="Ad-Hoc" />
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/settings_icon"
+        android:title="Settings" />
+</menu>

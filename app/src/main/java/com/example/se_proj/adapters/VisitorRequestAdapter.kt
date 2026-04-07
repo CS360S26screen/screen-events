@@ -1,58 +1,52 @@
 package com.example.se_proj.adapters
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.se_proj.R
+import com.example.se_proj.databinding.ItemVisitorRequestBinding
 import com.example.se_proj.models.VisitorRequest
-import com.example.se_proj.rules.UiFormatUtils
 
-/**
- * RecyclerView adapter for pending visitor requests shown on the admin approval screen.
- *
- * Design note: classic Adapter/ViewHolder pattern with callback injection for approve/reject
- * actions so decision handling stays in the hosting Activity.
- *
- * Outstanding issues: uses `notifyDataSetChanged()` for all updates; consider `DiffUtil` for
- * smoother animations and lower bind cost on large lists.
- */
 class VisitorRequestAdapter(
     private var requests: List<VisitorRequest>,
     private val onApproveClick: (VisitorRequest) -> Unit,
     private val onRejectClick: (VisitorRequest) -> Unit
 ) : RecyclerView.Adapter<VisitorRequestAdapter.ViewHolder>() {
 
-    /** Holds references to each request row's UI controls. */
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val tvGuestName: TextView = view.findViewById(R.id.tvGuestName)
-        val tvPurpose: TextView = view.findViewById(R.id.tvPurpose)
-        val tvDate: TextView = view.findViewById(R.id.tvDate)
-        val btnApprove: Button = view.findViewById(R.id.btnApprove)
-        val btnReject: Button = view.findViewById(R.id.btnReject)
-    }
+    class ViewHolder(val binding: ItemVisitorRequestBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_visitor_request, parent, false)
-        return ViewHolder(view)
+        val binding = ItemVisitorRequestBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return ViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val request = requests[position]
-        holder.tvGuestName.text = request.guestName
-        holder.tvPurpose.text = request.purpose
-        holder.tvDate.text = UiFormatUtils.formatVisitorDate(request.visitDate)
+        val context = holder.binding.root.context
 
-        holder.btnApprove.setOnClickListener { onApproveClick(request) }
-        holder.btnReject.setOnClickListener { onRejectClick(request) }
+        holder.binding.tvGuestName.text = request.guestName
+        holder.binding.tvHostInfo.text = request.purpose
+        holder.binding.tvTimeWindow.text = "${request.visitDate} | ${request.startTime} - ${request.endTime}"
+        holder.binding.chipStatus.text = request.status.uppercase()
+
+        val (bgColorRes, textColorRes) = when (request.status.lowercase()) {
+            "approved" -> R.color.status_approved_bg to R.color.status_approved_text
+            "rejected", "denied", "cancelled" -> R.color.status_denied_bg to R.color.status_denied_text
+            else -> R.color.status_pending_bg to R.color.status_pending_text
+        }
+
+        holder.binding.chipStatus.chipBackgroundColor =
+            ColorStateList.valueOf(ContextCompat.getColor(context, bgColorRes))
+        holder.binding.chipStatus.setTextColor(ContextCompat.getColor(context, textColorRes))
+
+        holder.binding.btnApprove.setOnClickListener { onApproveClick(request) }
+        holder.binding.btnReject.setOnClickListener { onRejectClick(request) }
     }
 
     override fun getItemCount() = requests.size
 
-    /** Replaces the current data set and refreshes the list rendering. */
     fun updateData(newRequests: List<VisitorRequest>) {
         requests = newRequests
         notifyDataSetChanged()

@@ -43,40 +43,45 @@ class StudentRequestActivity : AppCompatActivity() {
         binding = ActivityStudentRequestBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.toolbar.setNavigationOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            startActivity(intent)
-            finish()
-        }
-        binding.toolbar.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_logout -> {
-                    FirebaseAuth.getInstance().signOut()
-                    val intent = Intent(this, LoginActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    finish()
-                    true
-                }
-                else -> false
+        // Set click listeners for Date and Time pickers
+        binding.etVisitDate.setOnClickListener { showDatePicker() }
+        
+        binding.etStartTime.setOnClickListener {
+            showTimePicker { time ->
+                selectedStartTime = time
+                binding.etStartTime.setText(time)
             }
         }
 
-        binding.toolbar.navigationIcon = null
-        loadUserProfile()
+        binding.etEndTime.setOnClickListener {
+            showTimePicker { time ->
+                selectedEndTime = time
+                binding.etEndTime.setText(time)
+            }
+        }
 
-        binding.etVisitDate.setOnClickListener { showDatePicker() }
-        binding.etStartTime.setOnClickListener { showTimePicker { time ->
-            selectedStartTime = time
-            binding.etStartTime.setText(time)
-        }}
-        binding.etEndTime.setOnClickListener { showTimePicker { time ->
-            selectedEndTime = time
-            binding.etEndTime.setText(time)
-        }}
+        binding.btnSubmit.setOnClickListener {
+            checkLimitAndSubmit()
+        }
 
-        binding.btnSubmit.setOnClickListener { checkLimitAndSubmit() }
+        setupBottomNavigation()
+    }
+
+    private fun setupBottomNavigation() {
+        binding.bottomNavigation.selectedItemId = R.id.nav_new_pass
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_my_guests -> {
+                    startActivity(Intent(this, ManageActivePassActivity::class.java))
+                    true
+                }
+                R.id.nav_profile -> {
+                    // Navigate to profile if implemented
+                    true
+                }
+                else -> true
+            }
+        }
     }
 
     private fun loadUserProfile() {
@@ -159,8 +164,7 @@ class StudentRequestActivity : AppCompatActivity() {
             return
         }
 
-        binding.btnSubmit.isEnabled = false
-        val uid = auth.currentUser?.uid ?: ""
+        val studentRollNo = "27100xxx" // Get from logged-in user context
 
         db.collection("visitor_requests")
             .whereEqualTo("creatorId", uid)
@@ -212,7 +216,7 @@ class StudentRequestActivity : AppCompatActivity() {
             hostId = studentRollNo,
             creatorId = auth.currentUser?.uid ?: "",
             hostType = "student",
-            status = RequestStatus.PENDING,
+            status = "approved", // Auto-approve for demo/student logic
             onCampus = false
         )
 
@@ -220,7 +224,8 @@ class StudentRequestActivity : AppCompatActivity() {
             .add(request)
             .addOnSuccessListener {
                 Toast.makeText(this, "Request Submitted for Approval", Toast.LENGTH_SHORT).show()
-                clearForm()
+                // Optionally navigate to active pass view
+                startActivity(Intent(this, ManageActivePassActivity::class.java))
             }
             .addOnFailureListener { e ->
                 binding.btnSubmit.isEnabled = true

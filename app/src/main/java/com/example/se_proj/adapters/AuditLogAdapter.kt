@@ -46,18 +46,19 @@ class AuditLogAdapter(
             holder.binding.tvReason.visibility = View.GONE
         }
 
-        when (UiFormatUtils.resolveAuditVisualState(log.action, isOverstayView)) {
-            UiFormatUtils.AuditVisualState.OVERSTAYING -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFCDD2")) // Red tint
+        // Feature: Color-coded status for Admin visibility
+        when {
+            isOverstayView || log.action == "OVERSTAYING" -> {
+                holder.binding.root.setCardBackgroundColor(Color.parseColor("#FFCDD2")) // Red tint
             }
-            UiFormatUtils.AuditVisualState.ENTRY -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#C8E6C9")) // Green tint
+            log.action == "Entry" -> {
+                holder.binding.root.setCardBackgroundColor(Color.parseColor("#C8E6C9")) // Green tint
             }
-            UiFormatUtils.AuditVisualState.DENIED -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFE0B2")) // Orange tint
+            log.action == "Denied" -> {
+                holder.binding.root.setCardBackgroundColor(Color.parseColor("#FFE0B2")) // Orange tint
             }
-            UiFormatUtils.AuditVisualState.DEFAULT -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.WHITE)
+            else -> {
+                holder.binding.root.setCardBackgroundColor(Color.WHITE)
             }
         }
     }
