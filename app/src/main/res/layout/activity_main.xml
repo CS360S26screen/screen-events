@@ -5,71 +5,82 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8F9FA"
+    android:background="@color/white"
     tools:context=".MainActivity">
+
+    <ImageView
+        android:id="@+id/ivMainLogo"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_marginTop="80dp"
+        android:src="@android:drawable/ic_lock_lock"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/campus_blue_primary" />
 
     <TextView
         android:id="@+id/tvAppTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="64dp"
-        android:text="Visitor Management System"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:text="Campus Gate\nAccess System"
+        android:textColor="@color/text_color_primary"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:textColor="@color/design_default_color_primary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/ivMainLogo" />
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="48dp"
         android:orientation="vertical"
-        android:padding="32dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvAppTitle">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSubmitRequest"
-            style="@style/Widget.MaterialComponents.Button.Icon"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:text="Faculty Portal"
-            android:textSize="16sp"
-            app:icon="@android:drawable/ic_menu_edit" />
+            android:layout_height="wrap_content"
+            android:text="Faculty Portal" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStudentRequest"
-            style="@style/Widget.MaterialComponents.Button.Icon"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Student Portal"
-            android:textSize="16sp"
-            app:icon="@android:drawable/ic_menu_myplaces" />
+            android:text="Student Portal" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGuardDashboard"
-            style="@style/Widget.MaterialComponents.Button.Icon"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Guard Dashboard"
-            android:textSize="16sp"
-            app:icon="@android:drawable/ic_lock_power_off" />
+            android:text="Guard Dashboard" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAdminDashboard"
-            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Admin Control Panel"
-            android:textSize="16sp"
-            app:icon="@android:drawable/ic_menu_manage" />
+            android:text="Admin Control Panel" />
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvFooter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
+        android:text="Select your portal to continue"
+        android:textColor="@color/text_color_secondary"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
