@@ -9,15 +9,30 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.se_proj.databinding.ActivityStudentRequestBinding
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.RequestStatus
+import com.example.se_proj.rules.RequestValidationUtils
+import com.example.se_proj.rules.UserProfileUtils
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.firestore
 import java.util.Calendar
 import java.util.Locale
 
+/**
+ * Student guest-pass submission screen with single-active-pass and time-clash protections.
+ *
+ * Design note: thin UI coordinator that delegates domain constraints to `RequestValidationUtils`
+ * and user identity normalization to `UserProfileUtils`.
+ *
+ * Outstanding issues: profile fallback reads `studentId` while most flows use `rollNumber`/
+ * `facultyId`; schema inconsistency should be normalized across user documents.
+ */
 class StudentRequestActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityStudentRequestBinding
     private val db = Firebase.firestore
+    private val auth = FirebaseAuth.getInstance()
+    private var studentRollNo: String = ""
 
     private var selectedDate: String = ""
     private var selectedStartTime: String = ""
@@ -69,6 +84,47 @@ class StudentRequestActivity : AppCompatActivity() {
         }
     }
 
+    private fun loadUserProfile() {
+        val uid = auth.currentUser?.uid
+        if (uid.isNullOrEmpty()) {
+            Toast.makeText(this, "Please log in again to submit a guest pass", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        db.collection("Users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    setupProfileData(doc.id, doc.data)
+                } else {
+                    val email = auth.currentUser?.email
+                    if (email != null) {
+                        db.collection("Users").whereEqualTo("email", email).get()
+                            .addOnSuccessListener { query ->
+                                if (!query.isEmpty) {
+                                    val d = query.documents[0]
+                                    setupProfileData(d.id, d.data)
+                                } else {
+                                    Toast.makeText(this, "User profile not found", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                    }
+                }
+            }
+            .addOnFailureListener { error ->
+                Log.e("StudentRequest", "Failed to load user profile", error)
+                Toast.makeText(this, "Unable to load your profile", Toast.LENGTH_LONG).show()
+            }
+    }
+
+    private fun setupProfileData(docId: String, data: Map<String, Any>?) {
+        studentRollNo = UserProfileUtils.resolveHostId(
+            data?.get("rollNumber")?.toString(),
+            data?.get("studentId")?.toString(),
+            docId
+        )
+        binding.btnSubmit.isEnabled = studentRollNo.isNotEmpty()
+    }
+
     private fun showDatePicker() {
         val calendar = Calendar.getInstance()
         DatePickerDialog(this, { _, year, month, dayOfMonth ->
@@ -87,27 +143,63 @@ class StudentRequestActivity : AppCompatActivity() {
 
     private fun checkLimitAndSubmit() {
         val name = binding.etGuestName.text.toString().trim()
-        val cnic = binding.etCnic.text.toString().trim()
+        val cnic = RequestValidationUtils.normalizeCnic(binding.etCnic.text.toString())
 
-        if (name.isEmpty() || cnic.isEmpty() || selectedDate.isEmpty() || selectedStartTime.isEmpty() || selectedEndTime.isEmpty()) {
-            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
+        if (studentRollNo.isEmpty()) {
+            Toast.makeText(this, "Your profile is still loading", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val validation = RequestValidationUtils.validateStudentGuestRequest(
+            name,
+            cnic,
+            selectedDate,
+            selectedStartTime,
+            selectedEndTime,
+            java.time.LocalDate.now(),
+            java.time.LocalTime.now()
+        )
+        if (!validation.isValid) {
+            Toast.makeText(this, validation.message, Toast.LENGTH_SHORT).show()
             return
         }
 
         val studentRollNo = "27100xxx" // Get from logged-in user context
 
         db.collection("visitor_requests")
-            .whereEqualTo("hostId", studentRollNo)
-            .whereEqualTo("onCampus", true)
+            .whereEqualTo("creatorId", uid)
             .get()
             .addOnSuccessListener { documents ->
-                if (documents.size() >= 1) {
-                    Toast.makeText(this, "Limit reached: You already have an active guest on campus.", Toast.LENGTH_LONG).show()
+                val existingRequests = documents.toObjects(VisitorRequest::class.java)
+                if (RequestValidationUtils.hasBlockingStudentPass(existingRequests)) {
+                    binding.btnSubmit.isEnabled = true
+                    Toast.makeText(this, "You already have a pending guest pass. Wait for approval first.", Toast.LENGTH_LONG).show()
+                    return@addOnSuccessListener
+                }
+
+                if (RequestValidationUtils.hasTimeClashWithApproved(existingRequests, selectedDate, selectedStartTime, selectedEndTime)) {
+                    binding.btnSubmit.isEnabled = true
+                    Toast.makeText(this, "Time clashes with an already approved guest pass.", Toast.LENGTH_LONG).show()
+                    return@addOnSuccessListener
+                }
+
+                val hasDuplicate = existingRequests.any {
+                    RequestValidationUtils.matchesDuplicateCandidate(
+                        it,
+                        studentRollNo,
+                        cnic,
+                        selectedDate
+                    )
+                }
+                if (hasDuplicate) {
+                    binding.btnSubmit.isEnabled = true
+                    Toast.makeText(this, "A similar guest pass already exists for this visitor and date.", Toast.LENGTH_LONG).show()
                 } else {
                     saveVisitorRequest(name, cnic, studentRollNo)
                 }
             }
             .addOnFailureListener { e ->
+                binding.btnSubmit.isEnabled = true
                 Log.e("FirestoreError", "Error checking limits", e)
                 Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
@@ -122,6 +214,7 @@ class StudentRequestActivity : AppCompatActivity() {
             startTime = selectedStartTime,
             endTime = selectedEndTime,
             hostId = studentRollNo,
+            creatorId = auth.currentUser?.uid ?: "",
             hostType = "student",
             status = "approved", // Auto-approve for demo/student logic
             onCampus = false
@@ -135,8 +228,21 @@ class StudentRequestActivity : AppCompatActivity() {
                 startActivity(Intent(this, ManageActivePassActivity::class.java))
             }
             .addOnFailureListener { e ->
+                binding.btnSubmit.isEnabled = true
                 Log.e("FirestoreError", "Error adding document", e)
                 Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+    }
+
+    private fun clearForm() {
+        binding.etGuestName.text?.clear()
+        binding.etCnic.text?.clear()
+        binding.etVisitDate.text?.clear()
+        binding.etStartTime.text?.clear()
+        binding.etEndTime.text?.clear()
+        selectedDate = ""
+        selectedStartTime = ""
+        selectedEndTime = ""
+        binding.btnSubmit.isEnabled = true
     }
 }

@@ -7,14 +7,23 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.se_proj.databinding.ItemAuditLogBinding
 import com.example.se_proj.models.AuditLog
-import java.text.SimpleDateFormat
-import java.util.Locale
+import com.example.se_proj.rules.UiFormatUtils
 
+/**
+ * RecyclerView adapter for security audit records and computed overstay alerts.
+ *
+ * Design note: Adapter/ViewHolder pattern with presentation decisions delegated to
+ * `UiFormatUtils` for consistent timestamp/state formatting.
+ *
+ * Outstanding issues: hard-coded color values should be replaced with theme resources to
+ * support dark mode and centralized design tokens.
+ */
 class AuditLogAdapter(
     private var logs: List<AuditLog>,
     private var isOverstayView: Boolean = false
 ) : RecyclerView.Adapter<AuditLogAdapter.ViewHolder>() {
 
+    /** ViewHolder containing view-binding references for a single audit-log card. */
     class ViewHolder(val binding: ItemAuditLogBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -28,9 +37,7 @@ class AuditLogAdapter(
         holder.binding.tvCnic.text = "CNIC: ${log.visitorCNIC}"
         holder.binding.tvAction.text = "Action: ${log.action}"
         holder.binding.tvHostId.text = "Host ID: ${log.hostId}"
-        
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        holder.binding.tvTimestamp.text = sdf.format(log.timestamp.toDate())
+        holder.binding.tvTimestamp.text = UiFormatUtils.formatAuditTimestamp(log.timestamp)
 
         if (log.reason.isNotEmpty()) {
             holder.binding.tvReason.visibility = View.VISIBLE
@@ -58,6 +65,7 @@ class AuditLogAdapter(
 
     override fun getItemCount() = logs.size
 
+    /** Updates log rows and toggles overstay visual mode for subsequent binds. */
     fun updateData(newLogs: List<AuditLog>, overstay: Boolean = false) {
         logs = newLogs
         isOverstayView = overstay
