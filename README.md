@@ -1,9 +1,5 @@
 # Campus Gate Access System — Formatted Product Backlog
 
-## Documentation Index
-
-- JavaDoc/KDoc coverage and summaries: `JAVADOC_README.md`
-
 > **Priority Legend:** 🔴 High &nbsp;|&nbsp; 🟡 Medium &nbsp;|&nbsp; 🟢 Low  
 > **Checkpoint Legend:** 🏁 Half-point &nbsp;|&nbsp; 🎯 Full-point
 
@@ -67,6 +63,13 @@ The system interface is designed as a native Android application following **Mat
 * **Role-Based Dashboards:** Distinct interfaces for Guards (Utilitarian), Students (Simplified), and Admins (Data-Heavy).
 * **State-Aware UI:** Buttons dynamically toggle based on visitor status (e.g., *Check-In* transforms to *Check-Out*).
 * **Conflict Prevention:** Integrated error states for overbooked guest slots and expired visit windows.
+
+---
+
+## Halfway Point UML Diagrams
+<img width="1410" height="495" alt="UML1" src="https://github.com/user-attachments/assets/855fc595-5012-4c3d-8819-ecce6d52317a" />
+
+<img width="1430" height="319" alt="UML2" src="https://github.com/user-attachments/assets/66093b96-7412-4ca2-9da9-13446f3bb329" />
 
 
 
