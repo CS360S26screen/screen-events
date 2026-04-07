@@ -38,6 +38,12 @@ import java.util.Locale
  */
 class GuardDashboardActivity : AppCompatActivity() {
 
+    companion object {
+        const val EXTRA_GATE_MODE = "gate_mode"
+        const val MODE_IN_GATE = "in_gate"
+        const val MODE_OUT_GATE = "out_gate"
+    }
+
     private lateinit var binding: ActivityGuardDashboardBinding
     private val db = Firebase.firestore
     private lateinit var eventsAdapter: VisitorRequestAdapter
