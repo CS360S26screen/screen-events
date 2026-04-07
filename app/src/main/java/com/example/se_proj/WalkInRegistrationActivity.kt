@@ -1,5 +1,6 @@
 package com.example.se_proj
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -7,17 +8,30 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.se_proj.databinding.ActivityWalkInRegistrationBinding
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.RequestStatus
+import com.example.se_proj.rules.RequestValidationUtils
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.firestore
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Captures guard-initiated walk-in visitor requests and waits for host approval in real time.
+ *
+ * Design note: event-driven workflow using a Firestore document listener to update UI as the
+ * request status transitions from `pending_adhoc` to `approved`/`denied`.
+ *
+ * Outstanding issues: listener lifecycle is tied to this screen only; if the guard navigates
+ * away, approval updates are missed until the request is searched again.
+ */
 class WalkInRegistrationActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityWalkInRegistrationBinding
     private val db = Firebase.firestore
+    private val auth = FirebaseAuth.getInstance()
     private var listenerRegistration: ListenerRegistration? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,17 +39,39 @@ class WalkInRegistrationActivity : AppCompatActivity() {
         binding = ActivityWalkInRegistrationBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_logout -> {
+                    FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
+
         binding.btnSubmitWalkIn.setOnClickListener { submitWalkInRequest() }
     }
 
     private fun submitWalkInRequest() {
         val hostId = binding.etHostId.text.toString().trim()
         val name = binding.etGuestName.text.toString().trim()
-        val cnic = binding.etCnic.text.toString().trim()
+        val cnic = RequestValidationUtils.normalizeCnic(binding.etCnic.text.toString())
         val purpose = binding.etPurpose.text.toString().trim()
 
-        if (hostId.isEmpty() || name.isEmpty() || cnic.isEmpty() || purpose.isEmpty()) {
-            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
+        val validation = RequestValidationUtils.validateWalkInRequest(hostId, name, cnic, purpose)
+        if (!validation.isValid) {
+            Toast.makeText(this, validation.message, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val uid = auth.currentUser?.uid
+        if (uid.isNullOrEmpty()) {
+            Toast.makeText(this, "Please log in again", Toast.LENGTH_LONG).show()
             return
         }
 
@@ -48,15 +84,16 @@ class WalkInRegistrationActivity : AppCompatActivity() {
             purpose = purpose,
             visitDate = currentDate,
             startTime = currentTime,
-            endTime = "23:59", // Walk-in typically valid for the day
+            endTime = "23:59",
             hostId = hostId,
+            creatorId = uid,
             hostType = "faculty",
-            status = "pending_adhoc",
+            status = RequestStatus.PENDING_ADHOC,
             onCampus = false
         )
 
         binding.btnSubmitWalkIn.isEnabled = false
-        
+
         db.collection("visitor_requests")
             .add(request)
             .addOnSuccessListener { documentReference ->
@@ -65,6 +102,7 @@ class WalkInRegistrationActivity : AppCompatActivity() {
             }
             .addOnFailureListener { e ->
                 binding.btnSubmitWalkIn.isEnabled = true
+                Log.e("WalkIn", "Failed to send request", e)
                 Toast.makeText(this, "Failed to send request: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
@@ -86,7 +124,6 @@ class WalkInRegistrationActivity : AppCompatActivity() {
                         binding.tvApprovalStatus.text = "APPROVED! You can now check them in."
                         binding.tvApprovalStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, theme))
                         Toast.makeText(this, "Request Approved!", Toast.LENGTH_LONG).show()
-                        // Optionally auto-close or enable a check-in button here
                     } else if (status == "denied") {
                         binding.tvApprovalStatus.text = "DENIED by Faculty."
                         binding.tvApprovalStatus.setTextColor(resources.getColor(android.R.color.holo_red_dark, theme))
