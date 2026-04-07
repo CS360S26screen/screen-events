@@ -31,9 +31,17 @@
             android:exported="false"
             android:label="Student Request" />
         <activity
+            android:name=".ManageActivePassActivity"
+            android:exported="false"
+            android:label="Manage Active Pass" />
+        <activity
             android:name=".WalkInRegistrationActivity"
             android:exported="false"
             android:label="Walk-In Registration" />
+        <activity
+            android:name=".MainParkingActivity"
+            android:exported="false"
+            android:label="Main Parking" />
         <activity
             android:name=".AdminDashboardActivity"
             android:exported="false"

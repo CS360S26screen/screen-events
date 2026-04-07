@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
 import com.example.se_proj.databinding.ActivityGuardDashboardBinding
 import com.example.se_proj.models.AuditLog
 import com.example.se_proj.models.VisitorRequest
@@ -22,17 +23,29 @@ import java.util.Locale
 
 class GuardDashboardActivity : AppCompatActivity() {
 
+    companion object {
+        const val EXTRA_GATE_MODE = "gate_mode"
+        const val MODE_IN_GATE = "in_gate"
+        const val MODE_OUT_GATE = "out_gate"
+    }
+
     private lateinit var binding: ActivityGuardDashboardBinding
     private val db = Firebase.firestore
     private var currentRequest: VisitorRequest? = null
     private var searchListener: ListenerRegistration? = null
+    private var gateMode: String = MODE_IN_GATE
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityGuardDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setupParkingCounter()
+        gateMode = intent.getStringExtra(EXTRA_GATE_MODE) ?: MODE_IN_GATE
+
+        setupToolbar()
+        setupDrawer()
+        setupBottomNavigation()
+        setupScreenMode()
 
         binding.btnSearchCnic.setOnClickListener {
             val cnic = binding.etSearchCnic.text.toString().trim()
@@ -52,18 +65,14 @@ class GuardDashboardActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnWalkIn.setOnClickListener {
-            startActivity(Intent(this, WalkInRegistrationActivity::class.java))
-        }
-
         binding.btnAction.setOnClickListener {
             currentRequest?.let { request ->
-                val action = if (request.onCampus) "Check-Out" else "Check-In"
+                val action = if (shouldCheckOut(request)) "Check-Out" else "Check-In"
                 AlertDialog.Builder(this)
                     .setTitle("Confirm Action")
                     .setMessage("Are you sure you want to $action ${request.guestName}?")
                     .setPositiveButton("Yes") { _, _ ->
-                        if (request.onCampus) checkOut(request) else checkIn(request)
+                        if (shouldCheckOut(request)) checkOut(request) else checkIn(request)
                     }
                     .setNegativeButton("No", null)
                     .show()
@@ -82,53 +91,109 @@ class GuardDashboardActivity : AppCompatActivity() {
                     .show()
             }
         }
+    }
 
-        binding.btnParkingPlus.setOnClickListener { updateParking(1) }
-        binding.btnParkingMinus.setOnClickListener { updateParking(-1) }
+    private fun setupToolbar() {
+        binding.toolbar.setNavigationOnClickListener {
+            binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
+    }
 
-        binding.bottomNavigation.setOnItemSelectedListener { item ->
+    private fun setupDrawer() {
+        binding.drawerNavigation.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_logs -> {
-                    startActivity(Intent(this, AdminAuditActivity::class.java))
-                    false
+                R.id.drawer_in_gate -> {
+                    openGateMode(MODE_IN_GATE)
+                    true
                 }
-                else -> true
+                R.id.drawer_out_gate -> {
+                    openGateMode(MODE_OUT_GATE)
+                    true
+                }
+                R.id.drawer_main_parking -> {
+                    startActivity(Intent(this, MainParkingActivity::class.java))
+                    finish()
+                    true
+                }
+                else -> false
             }
         }
     }
 
-    private fun setupParkingCounter() {
-        db.collection("system_metadata").document("parking_status")
-            .addSnapshotListener { snapshot, e ->
-                if (e != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
-                val occupancy = snapshot.getLong("currentOccupancy") ?: 0
-                val capacity = snapshot.getLong("maxCapacity") ?: 200
-                binding.tvParkingCounter.text = "$occupancy / $capacity"
-                
-                binding.pbParking.max = capacity.toInt()
-                binding.pbParking.progress = occupancy.toInt()
-                
-                val ratio = occupancy.toFloat() / capacity
-                val color = when {
-                    ratio > 0.9 -> R.color.status_denied_text
-                    ratio > 0.7 -> android.R.color.holo_orange_dark
-                    else -> R.color.primary_purple
+    private fun setupBottomNavigation() {
+        binding.bottomNavigation.selectedItemId = R.id.nav_home
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> {
+                    if (gateMode != MODE_IN_GATE) {
+                        openGateMode(MODE_IN_GATE)
+                    }
+                    true
                 }
-                binding.pbParking.setIndicatorColor(ContextCompat.getColor(this, color))
+                R.id.nav_logs -> {
+                    startActivity(Intent(this, AdminAuditActivity::class.java))
+                    true
+                }
+                R.id.nav_adhoc -> {
+                    startActivity(Intent(this, WalkInRegistrationActivity::class.java))
+                    true
+                }
+                R.id.nav_settings -> {
+                    Toast.makeText(this, "Settings not available yet", Toast.LENGTH_SHORT).show()
+                    true
+                }
+                else -> false
             }
+        }
+    }
+
+    private fun setupScreenMode() {
+        val isOutGate = gateMode == MODE_OUT_GATE
+        binding.toolbar.title = if (isOutGate) "Out-Gate - Live Dashboard" else "In-Gate - Live Dashboard"
+        binding.drawerNavigation.setCheckedItem(
+            if (isOutGate) R.id.drawer_out_gate else R.id.drawer_in_gate
+        )
+        binding.btnAction.text = if (isOutGate) "Check-Out" else "Check-In"
+    }
+
+    private fun openGateMode(mode: String) {
+        if (gateMode == mode) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+            return
+        }
+        startActivity(
+            Intent(this, GuardDashboardActivity::class.java)
+                .putExtra(EXTRA_GATE_MODE, mode)
+        )
+        finish()
+    }
+
+    private fun shouldCheckOut(request: VisitorRequest): Boolean {
+        return gateMode == MODE_OUT_GATE || request.onCampus
     }
 
     private fun searchVisitorByCnic(cnic: String) {
         searchListener?.remove()
-        searchListener = db.collection("visitor_requests")
+        val query = db.collection("visitor_requests")
             .whereEqualTo("guestCNIC", cnic)
-            .whereEqualTo("status", "approved")
+            .let {
+                if (gateMode == MODE_OUT_GATE) {
+                    it.whereEqualTo("onCampus", true)
+                } else {
+                    it.whereEqualTo("status", "approved")
+                }
+            }
+        searchListener = query
             .addSnapshotListener { snapshots, e ->
                 if (e != null) return@addSnapshotListener
                 if (snapshots == null || snapshots.isEmpty) {
                     binding.cvResult.visibility = View.GONE
                     binding.tvEmptyState.visibility = View.VISIBLE
-                    binding.tvEmptyState.text = "No approved request found for this CNIC."
+                    binding.tvEmptyState.text = if (gateMode == MODE_OUT_GATE) {
+                        "No checked-in guest found for this CNIC."
+                    } else {
+                        "No approved request found for this CNIC."
+                    }
                 } else {
                     binding.tvEmptyState.visibility = View.GONE
                     val doc = snapshots.documents[0]
@@ -169,6 +234,15 @@ class GuardDashboardActivity : AppCompatActivity() {
         binding.tvGuestName.text = request.guestName
         binding.tvHostInfo.text = "Host ID: ${request.hostId} (${request.hostType})"
         binding.tvTimeWindow.text = "${request.visitDate} | ${request.startTime} - ${request.endTime}"
+
+        if (gateMode == MODE_OUT_GATE) {
+            binding.btnOverride.visibility = View.GONE
+            setChipStatus("INSIDE", R.color.status_approved_bg, R.color.status_approved_text)
+            binding.tvStatus.text = "Currently On Campus"
+            binding.btnAction.text = "Check-Out"
+            binding.btnAction.isEnabled = true
+            return
+        }
 
         val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         val currentDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())

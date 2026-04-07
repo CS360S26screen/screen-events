@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
     tools:context=".GuardDashboardActivity">
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
@@ -18,7 +23,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@drawable/ic_menu"
-            app:title="Security Portal"
+            app:title="In-Gate - Live Dashboard"
             app:titleCentered="true" />
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -31,142 +36,176 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="20dp">
 
-            <!-- Parking Capacity Tracker -->
-            <com.google.android.material.card.MaterialCardView
+            <TextView
+                style="@style/TextAppearance.App.TitleLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Search Requests" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilSearchCnic"
+                style="@style/Widget.App.TextInputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="Guest CNIC"
+                app:startIconDrawable="@android:drawable/ic_menu_myplaces"
+                app:startIconTint="@color/primary_purple">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSearchCnic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSearchCnic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Verify by CNIC" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilSearchRoll"
+                style="@style/Widget.App.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="Host ID (Current Guests)"
+                app:startIconDrawable="@android:drawable/ic_menu_search"
+                app:startIconTint="@color/primary_purple">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSearchRoll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSearchRoll"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Find by Host" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cvResult"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:visibility="gone"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/border_color">
+                app:strokeColor="@color/border_color"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="24dp">
+                    android:padding="20dp">
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Live Parking Capacity"
-                        android:textColor="@color/text_color_secondary"
-                        android:textSize="14sp" />
-
-                    <Box
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp">
-
-                        <com.google.android.material.progressindicator.CircularProgressIndicator
-                            android:id="@+id/pbParking"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:max="100"
-                            android:progress="48"
-                            app:indicatorColor="@color/campus_blue_primary"
-                            app:indicatorSize="120dp"
-                            app:trackColor="#F0F0F0"
-                            app:trackThickness="10dp" />
-
-                        <TextView
-                            android:id="@+id/tvParkingCount"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:text="48"
-                            android:textColor="@color/text_color_primary"
-                            android:textSize="32sp"
-                            android:textStyle="bold" />
-                    </Box>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Slots Occupied"
-                        android:textColor="@color/text_color_secondary"
-                        android:textSize="12sp" />
-
-                    <LinearLayout
+                        android:id="@+id/tvGuestName"
+                        style="@style/TextAppearance.App.TitleLarge"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        android:orientation="horizontal">
+                        android:textStyle="bold"
+                        tools:text="Guest Name" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnCheckOut"
-                            style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Check-Out"
-                            android:textColor="@color/status_alert_red"
-                            app:backgroundTint="#FFF0F0" />
+                    <TextView
+                        android:id="@+id/tvHostInfo"
+                        style="@style/TextAppearance.App.BodyMedium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        tools:text="Host: 27100xxx" />
 
-                        <View
-                            android:layout_width="16dp"
-                            android:layout_height="0dp" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textColor="@color/status_approved_text"
+                        app:chipBackgroundColor="@color/status_approved_bg"
+                        app:chipStrokeWidth="0dp"
+                        tools:text="AUTHORIZED" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnCheckIn"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:backgroundTint="@color/campus_blue_primary"
-                            android:text="Check-In" />
-                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvStatus"
+                        style="@style/TextAppearance.App.BodyMedium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textStyle="bold"
+                        tools:text="Authorized for Entry" />
+
+                    <TextView
+                        android:id="@+id/tvTimeWindow"
+                        style="@style/TextAppearance.App.BodyMedium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        tools:text="09:00 - 11:00" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAction"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        tools:text="Check-In" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnOverride"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Manual Override"
+                        android:textColor="@color/status_denied_text"
+                        android:visibility="gone" />
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Tabs Section -->
-            <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tabLayout"
+            <TextView
+                android:id="@+id/tvEmptyState"
+                style="@style/TextAppearance.App.BodyMedium"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                app:tabIndicatorColor="@color/campus_blue_primary"
-                app:tabSelectedTextColor="@color/campus_blue_primary"
-                app:tabTextColor="@color/text_color_secondary">
-
-                <com.google.android.material.tabs.TabItem
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="On-Site" />
-
-                <com.google.android.material.tabs.TabItem
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Log" />
-
-                <com.google.android.material.tabs.TabItem
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Exit Events" />
-            </com.google.android.material.tabs.TabLayout>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvEvents"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:nestedScrollingEnabled="false"
-                tools:listitem="@layout/item_visitor_request" />
+                android:layout_marginTop="32dp"
+                android:gravity="center"
+                android:text="No approved request found."
+                android:visibility="gone" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabAddWalkIn"
-        android:layout_width="wrap_content"
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:src="@android:drawable/ic_input_add"
-        app:backgroundTint="@color/campus_blue_primary"
-        app:tint="@color/white" />
+        android:layout_gravity="bottom"
+        android:background="@color/white"
+        app:itemIconTint="@color/nav_item_selector"
+        app:itemTextColor="@color/nav_item_selector"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/guard_bottom_nav_menu" />
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/drawerNavigation"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="@color/white"
+        app:itemTextColor="@color/text_color_primary"
+        app:menu="@menu/guard_nav_menu" />
+
+</androidx.drawerlayout.widget.DrawerLayout>
