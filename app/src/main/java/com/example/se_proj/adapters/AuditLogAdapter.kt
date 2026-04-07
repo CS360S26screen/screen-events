@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.se_proj.databinding.ItemAuditLogBinding
 import com.example.se_proj.models.AuditLog
 import com.example.se_proj.rules.UiFormatUtils
+import com.google.android.material.card.MaterialCardView
 
 /**
  * RecyclerView adapter for security audit records and computed overstay alerts.
@@ -46,18 +47,19 @@ class AuditLogAdapter(
             holder.binding.tvReason.visibility = View.GONE
         }
 
+        val card = holder.binding.root as MaterialCardView
         when (UiFormatUtils.resolveAuditVisualState(log.action, isOverstayView)) {
             UiFormatUtils.AuditVisualState.OVERSTAYING -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFCDD2")) // Red tint
+                card.setCardBackgroundColor(Color.parseColor("#FFCDD2")) // Red tint
             }
             UiFormatUtils.AuditVisualState.ENTRY -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#C8E6C9")) // Green tint
+                card.setCardBackgroundColor(Color.parseColor("#C8E6C9")) // Green tint
             }
             UiFormatUtils.AuditVisualState.DENIED -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFE0B2")) // Orange tint
+                card.setCardBackgroundColor(Color.parseColor("#FFE0B2")) // Orange tint
             }
             UiFormatUtils.AuditVisualState.DEFAULT -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.WHITE)
+                card.setCardBackgroundColor(Color.WHITE)
             }
         }
     }

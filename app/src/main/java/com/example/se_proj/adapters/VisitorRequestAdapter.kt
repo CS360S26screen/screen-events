@@ -8,6 +8,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.se_proj.R
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.RequestStatus
 import com.example.se_proj.rules.UiFormatUtils
 
 /**
@@ -28,8 +29,9 @@ class VisitorRequestAdapter(
     /** Holds references to each request row's UI controls. */
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvGuestName: TextView = view.findViewById(R.id.tvGuestName)
-        val tvPurpose: TextView = view.findViewById(R.id.tvPurpose)
-        val tvDate: TextView = view.findViewById(R.id.tvDate)
+        val tvHostInfo: TextView = view.findViewById(R.id.tvHostInfo)
+        val tvTimeWindow: TextView = view.findViewById(R.id.tvTimeWindow)
+        val chipStatus: TextView = view.findViewById(R.id.chipStatus)
         val btnApprove: Button = view.findViewById(R.id.btnApprove)
         val btnReject: Button = view.findViewById(R.id.btnReject)
     }
@@ -43,8 +45,9 @@ class VisitorRequestAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val request = requests[position]
         holder.tvGuestName.text = request.guestName
-        holder.tvPurpose.text = request.purpose
-        holder.tvDate.text = UiFormatUtils.formatVisitorDate(request.visitDate)
+        holder.tvHostInfo.text = "Host: ${request.hostId}"
+        holder.tvTimeWindow.text = UiFormatUtils.formatFacultyVisitInfo(request)
+        holder.chipStatus.text = RequestStatus.normalize(request.status).uppercase()
 
         holder.btnApprove.setOnClickListener { onApproveClick(request) }
         holder.btnReject.setOnClickListener { onRejectClick(request) }

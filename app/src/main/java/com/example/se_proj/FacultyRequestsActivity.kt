@@ -42,6 +42,7 @@ class FacultyRequestsActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.inflateMenu(R.menu.top_app_bar)
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_logout -> {
@@ -58,6 +59,11 @@ class FacultyRequestsActivity : AppCompatActivity() {
 
         setupRecyclerView()
         loadUserProfile()
+
+        binding.fabAddRequest.setOnClickListener {
+            val intent = Intent(this, RequestSubmissionActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun setupRecyclerView() {

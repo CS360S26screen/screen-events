@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.se_proj.databinding.ItemFacultyRequestBinding
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.RequestStatus
 import com.example.se_proj.rules.UiFormatUtils
 
 /**
@@ -34,7 +35,7 @@ class FacultyRequestAdapter(
         val request = requests[position]
         holder.binding.tvGuestName.text = request.guestName
         holder.binding.tvVisitInfo.text = UiFormatUtils.formatFacultyVisitInfo(request)
-        holder.binding.tvStatus.text = UiFormatUtils.formatRequestStatus(request.status)
+        holder.binding.chipStatus.text = RequestStatus.normalize(request.status).uppercase()
 
         holder.binding.btnEdit.setOnClickListener { onEditClick(request) }
         holder.binding.btnCancel.setOnClickListener { onCancelClick(request) }
