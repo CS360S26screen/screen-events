@@ -11,6 +11,17 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.se_proj.databinding.ActivityMainBinding;
 
+/**
+ * Landing navigation screen for quick role-based feature access during development/demo.
+ *
+ * <p>Role in app: a simple routing hub that opens request submission, student request,
+ * admin dashboard, and guard dashboard screens.</p>
+ *
+ * <p>Design note: keeps navigation wiring centralized while feature screens evolve.</p>
+ *
+ * <p><b>Outstanding issues:</b> this screen bypasses production role-based access control and
+ * should be hidden or removed for release builds.</p>
+ */
 public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;

@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions to check user roles
+    function getUserRole(uid) {
+      return get(/databases/$(database)/documents/Users/$(uid)).data.role;
+    }
+
+    function isAdmin(uid) {
+      return getUserRole(uid) == 'admin';
+    }
+
+    function isGuard(uid) {
+      return getUserRole(uid) == 'guard';
+    }
+
+    function isFaculty(uid) {
+      return getUserRole(uid) == 'faculty';
+    }
+
+    function isStudent(uid) {
+      return getUserRole(uid) == 'student';
+    }
+
+    // Rule for the 'Users' collection
+    match /Users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule for the 'visitor_requests' collection
+    match /visitor_requests/{requestId} {
+      // Guards can also create (for walk-in requests)
+      allow create: if request.auth != null &&
+                      (isFaculty(request.auth.uid) || isStudent(request.auth.uid) || isGuard(request.auth.uid)) &&
+                      request.resource.data.creatorId == request.auth.uid;
+
+      // Any authenticated user can read visitor requests
+      // (app-level queries filter by creatorId/hostId per role)
+      allow read: if request.auth != null;
+
+      // Admin: full update (approve/reject)
+      // Guard: check-in/check-out updates
+      // Faculty: edit/cancel own requests + approve/deny walk-in requests for their hosts
+      // Student: cancel/edit only their own requests
+      allow update: if request.auth != null &&
+                    (isAdmin(request.auth.uid) ||
+                     isGuard(request.auth.uid) ||
+                     isFaculty(request.auth.uid) ||
+                     (isStudent(request.auth.uid) && resource.data.creatorId == request.auth.uid));
+
+      allow delete: if false;
+    }
+
+    // Rule for access_logs — both guards and admins can create audit entries
+    match /access_logs/{logId} {
+      allow read: if request.auth != null && isAdmin(request.auth.uid);
+      allow create: if request.auth != null && (isGuard(request.auth.uid) || isAdmin(request.auth.uid));
+    }
+
+    // Rule for system_metadata (parking status etc.)
+    // write (not just update) so guards can initialize the document if missing
+    match /system_metadata/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (isGuard(request.auth.uid) || isAdmin(request.auth.uid));
+    }
+  }
+}

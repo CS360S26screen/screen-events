@@ -8,13 +8,24 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.se_proj.R
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.UiFormatUtils
 
+/**
+ * RecyclerView adapter for pending visitor requests shown on the admin approval screen.
+ *
+ * Design note: classic Adapter/ViewHolder pattern with callback injection for approve/reject
+ * actions so decision handling stays in the hosting Activity.
+ *
+ * Outstanding issues: uses `notifyDataSetChanged()` for all updates; consider `DiffUtil` for
+ * smoother animations and lower bind cost on large lists.
+ */
 class VisitorRequestAdapter(
     private var requests: List<VisitorRequest>,
     private val onApproveClick: (VisitorRequest) -> Unit,
     private val onRejectClick: (VisitorRequest) -> Unit
 ) : RecyclerView.Adapter<VisitorRequestAdapter.ViewHolder>() {
 
+    /** Holds references to each request row's UI controls. */
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvGuestName: TextView = view.findViewById(R.id.tvGuestName)
         val tvPurpose: TextView = view.findViewById(R.id.tvPurpose)
@@ -33,7 +44,7 @@ class VisitorRequestAdapter(
         val request = requests[position]
         holder.tvGuestName.text = request.guestName
         holder.tvPurpose.text = request.purpose
-        holder.tvDate.text = "Date: ${request.visitDate}"
+        holder.tvDate.text = UiFormatUtils.formatVisitorDate(request.visitDate)
 
         holder.btnApprove.setOnClickListener { onApproveClick(request) }
         holder.btnReject.setOnClickListener { onRejectClick(request) }
@@ -41,6 +52,7 @@ class VisitorRequestAdapter(
 
     override fun getItemCount() = requests.size
 
+    /** Replaces the current data set and refreshes the list rendering. */
     fun updateData(newRequests: List<VisitorRequest>) {
         requests = newRequests
         notifyDataSetChanged()

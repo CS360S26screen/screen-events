@@ -1,5 +1,6 @@
 package com.example.se_proj
 
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -10,25 +11,53 @@ import com.example.se_proj.adapters.AuditLogAdapter
 import com.example.se_proj.databinding.ActivityAdminAuditBinding
 import com.example.se_proj.models.AuditLog
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.AuditLogUtils
 import com.google.android.material.tabs.TabLayout
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.time.LocalDateTime
 
+/**
+ * Displays security audit history and computed overstay alerts for administrative review.
+ *
+ * Design note: combines repository/listener orchestration with adapter presentation, while
+ * delegating merge and overstay logic to `AuditLogUtils` (rules-engine extraction).
+ *
+ * Outstanding issues: search currently runs two live listeners per query and may increase
+ * Firestore read costs under sustained typing; debounce/server-side indexing is recommended.
+ */
 class AdminAuditActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAdminAuditBinding
     private val db = Firebase.firestore
     private lateinit var adapter: AuditLogAdapter
     private var currentTab = 0
+    private var logsListener: ListenerRegistration? = null
+    private var searchListener1: ListenerRegistration? = null
+    private var searchListener2: ListenerRegistration? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAdminAuditBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_logout -> {
+                    FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
 
         setupRecyclerView()
         setupTabs()
@@ -73,57 +102,80 @@ class AdminAuditActivity : AppCompatActivity() {
         if (currentTab == 0) fetchLogs() else fetchOverstaying()
     }
 
+    private fun removeSearchListeners() {
+        searchListener1?.remove()
+        searchListener2?.remove()
+        searchListener1 = null
+        searchListener2 = null
+    }
+
     private fun fetchLogs() {
-        db.collection("access_logs")
+        removeSearchListeners()
+        logsListener?.remove()
+        logsListener = db.collection("access_logs")
             .orderBy("timestamp", Query.Direction.DESCENDING)
-            .get()
-            .addOnSuccessListener { snapshots ->
+            .addSnapshotListener { snapshots, e ->
+                if (e != null) return@addSnapshotListener
                 val logs = snapshots?.toObjects(AuditLog::class.java) ?: emptyList()
                 adapter.updateData(logs)
             }
     }
 
     private fun searchLogs(text: String) {
-        // Requirement #12: Search by CNIC or Host ID
-        // Note: Firestore doesn't support OR queries easily with different fields in a simple way without indexes or multiple queries.
-        // For satisfying the requirement "Use .whereEqualTo("visitorCNIC", searchText)", we will perform two searches or filter.
-        
-        db.collection("access_logs")
+        logsListener?.remove()
+        logsListener = null
+        removeSearchListeners()
+
+        val cnicLogs = mutableListOf<AuditLog>()
+        val hostLogs = mutableListOf<AuditLog>()
+        var cnicDone = false
+        var hostDone = false
+
+        fun mergeIfBothDone() {
+            if (cnicDone && hostDone) {
+                val merged = AuditLogUtils.mergeAndSortDistinct(cnicLogs, hostLogs)
+                adapter.updateData(merged)
+            }
+        }
+
+        searchListener1 = db.collection("access_logs")
             .whereEqualTo("visitorCNIC", text)
-            .get()
-            .addOnSuccessListener { snaps1 ->
-                val logs = snaps1.toObjects(AuditLog::class.java).toMutableList()
-                
-                db.collection("access_logs")
-                    .whereEqualTo("hostId", text)
-                    .get()
-                    .addOnSuccessListener { snaps2 ->
-                        logs.addAll(snaps2.toObjects(AuditLog::class.java))
-                        adapter.updateData(logs.distinctBy { it.id }.sortedByDescending { it.timestamp })
-                    }
+            .addSnapshotListener { snaps, e ->
+                if (e != null) return@addSnapshotListener
+                cnicLogs.clear()
+                cnicLogs.addAll(snaps?.toObjects(AuditLog::class.java) ?: emptyList())
+                cnicDone = true
+                mergeIfBothDone()
+            }
+
+        searchListener2 = db.collection("access_logs")
+            .whereEqualTo("hostId", text)
+            .addSnapshotListener { snaps, e ->
+                if (e != null) return@addSnapshotListener
+                hostLogs.clear()
+                hostLogs.addAll(snaps?.toObjects(AuditLog::class.java) ?: emptyList())
+                hostDone = true
+                mergeIfBothDone()
             }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        logsListener?.remove()
+        removeSearchListeners()
+    }
+
     private fun fetchOverstaying() {
-        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        val now = LocalDateTime.now()
         db.collection("visitor_requests")
             .whereEqualTo("onCampus", true)
             .get()
             .addOnSuccessListener { snapshots ->
                 val overstayingRequests = snapshots?.toObjects(VisitorRequest::class.java) ?: emptyList()
-                val filteredOverstaying = overstayingRequests.filter { it.endTime < currentTime }
-                
-                val mappedLogs = filteredOverstaying.map { 
-                    AuditLog(
-                        visitorName = it.guestName,
-                        visitorCNIC = it.guestCNIC,
-                        hostId = it.hostId,
-                        action = "OVERSTAYING",
-                        reason = "Scheduled exit: ${it.endTime}"
-                    )
-                }
-                adapter = AuditLogAdapter(mappedLogs, isOverstayView = true)
-                binding.rvAuditLogs.adapter = adapter
+                val mappedLogs = overstayingRequests
+                    .filter { AuditLogUtils.isOverstaying(it, now) }
+                    .map { AuditLogUtils.toOverstayAuditLog(it) }
+                adapter.updateData(mappedLogs, overstay = true)
             }
     }
 }

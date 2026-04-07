@@ -10,10 +10,20 @@ import com.example.se_proj.adapters.VisitorRequestAdapter
 import com.example.se_proj.databinding.ActivityAdminDashboardBinding
 import com.example.se_proj.models.AuditLog
 import com.example.se_proj.models.VisitorRequest
+import com.example.se_proj.rules.RequestStatus
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.firestore
 
+/**
+ * Admin control panel for approving/rejecting visitor requests and monitoring live summary stats.
+ *
+ * Design note: controller-style Activity that binds Firestore listeners to UI widgets and emits
+ * audit events for admin actions.
+ *
+ * Outstanding issues: status changes and audit-log writes are separate operations (not atomic),
+ * so partial failure can leave request state and audit trail temporarily inconsistent.
+ */
 class AdminDashboardActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAdminDashboardBinding
@@ -25,8 +35,24 @@ class AdminDashboardActivity : AppCompatActivity() {
         binding = ActivityAdminDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_logout -> {
+                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
+
         setupRecyclerView()
         setupSummaryStats()
+        ensureParkingDocument()
         fetchPendingRequests()
 
         binding.btnViewAudit.setOnClickListener {
@@ -64,33 +90,47 @@ class AdminDashboardActivity : AppCompatActivity() {
 
     private fun fetchPendingRequests() {
         db.collection("visitor_requests")
-            .whereEqualTo("status", "pending")
+            .whereIn("status", listOf(RequestStatus.PENDING, RequestStatus.PENDING_ADHOC))
             .addSnapshotListener { snapshots, e ->
                 if (e != null) {
                     Log.w("AdminDashboard", "Listen failed.", e)
                     return@addSnapshotListener
                 }
-                val pendingList = snapshots?.toObjects(VisitorRequest::class.java) ?: emptyList()
+                val pendingList = snapshots?.documents?.mapNotNull { doc ->
+                    val request = doc.toObject(VisitorRequest::class.java)
+                    // Explicitly set the requestId from the document ID if it's missing
+                    request?.copy(requestId = doc.id)
+                } ?: emptyList()
                 adapter.updateData(pendingList)
             }
     }
 
     private fun handleApprove(request: VisitorRequest) {
-        if (request.requestId.isEmpty()) return
-        updateRequestStatus(request, "approved")
+        updateRequestStatus(request, RequestStatus.APPROVED)
     }
 
     private fun handleReject(request: VisitorRequest) {
-        if (request.requestId.isEmpty()) return
-        updateRequestStatus(request, "rejected")
+        updateRequestStatus(request, RequestStatus.REJECTED)
     }
 
+
     private fun updateRequestStatus(request: VisitorRequest, newStatus: String) {
-        db.collection("visitor_requests").document(request.requestId)
+        val requestId = request.requestId
+        if (requestId.isEmpty()) {
+            Toast.makeText(this, "Error: Request ID is missing from document", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        db.collection("visitor_requests").document(requestId)
             .update("status", newStatus)
             .addOnSuccessListener {
                 logAdminAction(request, newStatus.uppercase())
                 Toast.makeText(this, "Request ${newStatus.replaceFirstChar { it.uppercase() }}", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener { error ->
+                Log.e("AdminDashboard", "Failed to update ID: $requestId", error)
+                // Change this line to see the ACTUAL error from Firebase
+                Toast.makeText(this, "Firebase Error: ${error.message}", Toast.LENGTH_LONG).show()
             }
     }
 
@@ -101,8 +141,21 @@ class AdminDashboardActivity : AppCompatActivity() {
             hostId = request.hostId,
             action = "ADMIN_$action",
             reason = "Action taken by Security Admin",
+            creatorId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "",
             timestamp = Timestamp.now()
         )
         db.collection("access_logs").add(log)
+            .addOnFailureListener { e ->
+                Log.e("AdminDashboard", "Failed to write audit log", e)
+            }
+    }
+
+    private fun ensureParkingDocument() {
+        val docRef = db.collection("system_metadata").document("parking_status")
+        docRef.get().addOnSuccessListener { snapshot ->
+            if (!snapshot.exists()) {
+                docRef.set(mapOf("currentOccupancy" to 0L, "maxCapacity" to 200L))
+            }
+        }
     }
 }
