@@ -15,6 +15,15 @@ import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.firestore
 
+/**
+ * Admin control panel for approving/rejecting visitor requests and monitoring live summary stats.
+ *
+ * Design note: controller-style Activity that binds Firestore listeners to UI widgets and emits
+ * audit events for admin actions.
+ *
+ * Outstanding issues: status changes and audit-log writes are separate operations (not atomic),
+ * so partial failure can leave request state and audit trail temporarily inconsistent.
+ */
 class AdminDashboardActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAdminDashboardBinding

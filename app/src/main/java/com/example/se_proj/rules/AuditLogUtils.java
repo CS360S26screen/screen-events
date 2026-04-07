@@ -17,7 +17,13 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Shared audit and reminder logic used by both admin and host flows.
+ * Shared audit-log and overstay-detection logic used by both the Admin Audit screen
+ * and the Faculty host-reminder flow.
+ *
+ * <p>This utility class keeps audit concerns (log merging, overstay evaluation,
+ * exit-reminder timing) in pure Java so they can be unit-tested without Android
+ * dependencies. It follows the same <b>Rules Engine</b> extraction pattern as
+ * {@link RequestValidationUtils} and {@link VisitWindowEvaluator}.</p>
  */
 public final class AuditLogUtils {
 
@@ -29,6 +35,17 @@ public final class AuditLogUtils {
     private AuditLogUtils() {
     }
 
+    /**
+     * Merges two audit-log lists, removes duplicates (by document ID or composite key),
+     * and returns the result sorted newest-first.
+     *
+     * <p>Used by the admin search flow which fires two parallel Firestore queries
+     * (by CNIC and by host ID) and needs to combine the results without duplicates.</p>
+     *
+     * @param first  first batch of audit logs (may be {@code null}).
+     * @param second second batch of audit logs (may be {@code null}).
+     * @return merged, de-duplicated, timestamp-descending list.
+     */
     public static List<AuditLog> mergeAndSortDistinct(
             List<AuditLog> first,
             List<AuditLog> second
@@ -42,6 +59,13 @@ public final class AuditLogUtils {
         return results;
     }
 
+    /**
+     * Returns {@code true} if the visitor is on campus and their approved end time has passed.
+     *
+     * @param request the visitor request to evaluate.
+     * @param now     the current date-time.
+     * @return whether the visitor is overstaying.
+     */
     public static boolean isOverstaying(VisitorRequest request, LocalDateTime now) {
         if (request == null || !request.getOnCampus()) {
             return false;
@@ -50,6 +74,15 @@ public final class AuditLogUtils {
         return visitEnd != null && !now.isBefore(visitEnd);
     }
 
+    /**
+     * Returns {@code true} if an exit reminder should be shown to the host because the
+     * visitor's approved window is about to close.
+     *
+     * @param request         the on-campus visitor request.
+     * @param now             the current date-time.
+     * @param reminderMinutes how many minutes before the end time to trigger the reminder.
+     * @return whether the reminder window is active (0 to {@code reminderMinutes} remaining).
+     */
     public static boolean shouldSendExitReminder(
             VisitorRequest request,
             LocalDateTime now,
@@ -66,6 +99,13 @@ public final class AuditLogUtils {
         return minutesLeft >= 0 && minutesLeft <= reminderMinutes;
     }
 
+    /**
+     * Converts an overstaying {@link VisitorRequest} into an {@link AuditLog} entry
+     * suitable for display in the admin overstay view.
+     *
+     * @param request the on-campus request whose end time has passed.
+     * @return an audit-log representation with action {@code "OVERSTAYING"}.
+     */
     public static AuditLog toOverstayAuditLog(VisitorRequest request) {
         return new AuditLog(
                 "",

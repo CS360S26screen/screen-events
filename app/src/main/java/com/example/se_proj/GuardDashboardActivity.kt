@@ -27,6 +27,16 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Gate-operations dashboard used by guards to search visitors, evaluate entry windows,
+ * perform check-in/check-out actions, and maintain parking occupancy.
+ *
+ * Design note: applies the strategy result from `VisitWindowEvaluator` to drive UI state,
+ * and uses transactional updates for occupancy changes.
+ *
+ * Outstanding issues: denied-access logging is triggered during result rendering and may be
+ * duplicated on repeated searches; idempotent logging guards should be added.
+ */
 class GuardDashboardActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityGuardDashboardBinding

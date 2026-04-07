@@ -10,6 +10,15 @@ import com.example.se_proj.rules.LoginInputUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
+/**
+ * Authenticates users and routes them to the correct dashboard based on Firestore role data.
+ *
+ * Design pattern: application-service style Activity that delegates credential normalization
+ * to `LoginInputUtils` and keeps Firebase auth/profile lookup orchestration in one place.
+ *
+ * Outstanding issues: profile-link fallback (`email` query -> UID document copy) can race when
+ * multiple devices sign in simultaneously and should be migrated to a server-side migration path.
+ */
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding

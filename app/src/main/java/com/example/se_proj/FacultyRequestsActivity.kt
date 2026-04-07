@@ -19,6 +19,15 @@ import com.google.firebase.firestore.firestore
 import java.util.Calendar
 import java.util.Locale
 
+/**
+ * Hosts the faculty "My Requests" management screen (view, edit timing/date, cancel).
+ *
+ * Design note: Activity + RecyclerView adapter coordination where edit/cancel permissions are
+ * delegated to `RequestStatus` policy helpers.
+ *
+ * Outstanding issues: field-level updates are independent writes without conflict detection;
+ * concurrent edits from multiple clients may overwrite each other.
+ */
 class FacultyRequestsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityFacultyRequestsBinding

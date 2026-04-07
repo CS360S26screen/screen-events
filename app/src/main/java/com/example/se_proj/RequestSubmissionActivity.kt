@@ -22,6 +22,16 @@ import java.time.LocalDateTime
 import java.util.Calendar
 import java.util.Locale
 
+/**
+ * Faculty request-creation screen for scheduled visitors plus real-time handling of walk-in
+ * approvals and near-end-time host reminders.
+ *
+ * Design note: orchestrates UI events and Firestore listeners while delegating validation,
+ * status semantics, and reminder/overstay timing logic to rule utilities.
+ *
+ * Outstanding issues: reminder deduplication is in-memory only (`shownReminderRequestIds`) and
+ * resets on process death, so reminders can reappear after app restart.
+ */
 class RequestSubmissionActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRequestSubmissionBinding
@@ -285,10 +295,7 @@ class RequestSubmissionActivity : AppCompatActivity() {
             .add(request)
             .addOnSuccessListener {
                 Toast.makeText(this, "Request Submitted Successfully", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, MainActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                startActivity(intent)
-                finish()
+                clearForm()
             }
             .addOnFailureListener { e ->
                 binding.btnSubmit.isEnabled = true

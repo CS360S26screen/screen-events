@@ -18,6 +18,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Captures guard-initiated walk-in visitor requests and waits for host approval in real time.
+ *
+ * Design note: event-driven workflow using a Firestore document listener to update UI as the
+ * request status transitions from `pending_adhoc` to `approved`/`denied`.
+ *
+ * Outstanding issues: listener lifecycle is tied to this screen only; if the guard navigates
+ * away, approval updates are missed until the request is searched again.
+ */
 class WalkInRegistrationActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityWalkInRegistrationBinding
@@ -92,7 +101,7 @@ class WalkInRegistrationActivity : AppCompatActivity() {
                 listenForApproval(documentReference.id)
             }
             .addOnFailureListener { e ->
-                binding.btnSubmitWalkIn.isEnabled = false
+                binding.btnSubmitWalkIn.isEnabled = true
                 Log.e("WalkIn", "Failed to send request", e)
                 Toast.makeText(this, "Failed to send request: ${e.message}", Toast.LENGTH_SHORT).show()
             }

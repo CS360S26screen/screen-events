@@ -18,6 +18,15 @@ import com.google.firebase.firestore.firestore
 import java.util.Calendar
 import java.util.Locale
 
+/**
+ * Student guest-pass submission screen with single-active-pass and time-clash protections.
+ *
+ * Design note: thin UI coordinator that delegates domain constraints to `RequestValidationUtils`
+ * and user identity normalization to `UserProfileUtils`.
+ *
+ * Outstanding issues: profile fallback reads `studentId` while most flows use `rollNumber`/
+ * `facultyId`; schema inconsistency should be normalized across user documents.
+ */
 class StudentRequestActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityStudentRequestBinding
@@ -160,7 +169,13 @@ class StudentRequestActivity : AppCompatActivity() {
                 val existingRequests = documents.toObjects(VisitorRequest::class.java)
                 if (RequestValidationUtils.hasBlockingStudentPass(existingRequests)) {
                     binding.btnSubmit.isEnabled = true
-                    Toast.makeText(this, "Limit reached: you already have an active or pending guest pass.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "You already have a pending guest pass. Wait for approval first.", Toast.LENGTH_LONG).show()
+                    return@addOnSuccessListener
+                }
+
+                if (RequestValidationUtils.hasTimeClashWithApproved(existingRequests, selectedDate, selectedStartTime, selectedEndTime)) {
+                    binding.btnSubmit.isEnabled = true
+                    Toast.makeText(this, "Time clashes with an already approved guest pass.", Toast.LENGTH_LONG).show()
                     return@addOnSuccessListener
                 }
 
