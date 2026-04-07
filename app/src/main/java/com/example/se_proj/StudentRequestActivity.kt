@@ -5,8 +5,16 @@ import android.app.TimePickerDialog
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.se_proj.adapters.StudentGuestLogAdapter
 import com.example.se_proj.databinding.ActivityStudentRequestBinding
 import com.example.se_proj.models.VisitorRequest
 import com.example.se_proj.rules.RequestStatus
@@ -33,6 +41,10 @@ class StudentRequestActivity : AppCompatActivity() {
     private val db = Firebase.firestore
     private val auth = FirebaseAuth.getInstance()
     private var studentRollNo: String = ""
+    private var studentUid: String = ""
+    private var myGuestsRecycler: RecyclerView? = null
+    private var myGuestsEmptyView: TextView? = null
+    private lateinit var myGuestsAdapter: StudentGuestLogAdapter
 
     private var selectedDate: String = ""
     private var selectedStartTime: String = ""
@@ -64,6 +76,8 @@ class StudentRequestActivity : AppCompatActivity() {
         }
 
         binding.toolbar.navigationIcon = null
+    setupMyGuestsViews()
+    setupBottomNavigation()
         loadUserProfile()
 
         binding.etVisitDate.setOnClickListener { showDatePicker() }
@@ -79,8 +93,124 @@ class StudentRequestActivity : AppCompatActivity() {
         binding.btnSubmit.setOnClickListener { checkLimitAndSubmit() }
     }
 
+    private fun setupBottomNavigation() {
+        binding.bottomNavigation.selectedItemId = R.id.nav_new_pass
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_new_pass -> {
+                    showNewPassForm()
+                    true
+                }
+                R.id.nav_my_guests -> {
+                    showMyGuestsLog()
+                    true
+                }
+                R.id.nav_profile -> {
+                    Toast.makeText(this, "Profile coming soon", Toast.LENGTH_SHORT).show()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun setupMyGuestsViews() {
+        val contentRoot = (((binding.root.getChildAt(1) as? androidx.core.widget.NestedScrollView)
+            ?.getChildAt(0)) as? ConstraintLayout) ?: return
+
+        myGuestsAdapter = StudentGuestLogAdapter(emptyList())
+
+        myGuestsRecycler = RecyclerView(this).apply {
+            id = View.generateViewId()
+            layoutManager = LinearLayoutManager(this@StudentRequestActivity)
+            adapter = myGuestsAdapter
+            visibility = View.GONE
+        }
+
+        myGuestsEmptyView = TextView(this).apply {
+            id = View.generateViewId()
+            text = "No guest requests found yet."
+            textSize = 14f
+            visibility = View.GONE
+        }
+
+        contentRoot.addView(myGuestsRecycler)
+        contentRoot.addView(myGuestsEmptyView)
+
+        val recyclerParams = LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            0
+        ).apply {
+            topToBottom = R.id.tvHeader
+            bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            topMargin = 24
+        }
+        myGuestsRecycler?.layoutParams = recyclerParams
+
+        val emptyParams = LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            topToBottom = R.id.tvHeader
+            startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            topMargin = 48
+        }
+        myGuestsEmptyView?.layoutParams = emptyParams
+    }
+
+    private fun showNewPassForm() {
+        binding.tvHeader.text = "Register New Guest"
+        binding.tilGuestName.visibility = View.VISIBLE
+        binding.tilCnic.visibility = View.VISIBLE
+        binding.tilVisitDate.visibility = View.VISIBLE
+        binding.llTimeSlots.visibility = View.VISIBLE
+        binding.btnSubmit.visibility = View.VISIBLE
+        myGuestsRecycler?.visibility = View.GONE
+        myGuestsEmptyView?.visibility = View.GONE
+    }
+
+    private fun showMyGuestsLog() {
+        binding.tvHeader.text = "My Guests"
+        binding.tilGuestName.visibility = View.GONE
+        binding.tilCnic.visibility = View.GONE
+        binding.tilVisitDate.visibility = View.GONE
+        binding.llTimeSlots.visibility = View.GONE
+        binding.btnSubmit.visibility = View.GONE
+        myGuestsRecycler?.visibility = View.VISIBLE
+        fetchMyGuestsLog()
+    }
+
+    private fun fetchMyGuestsLog() {
+        if (studentRollNo.isBlank()) {
+            myGuestsAdapter.updateData(emptyList())
+            myGuestsEmptyView?.visibility = View.VISIBLE
+            return
+        }
+
+        db.collection("visitor_requests")
+            .whereEqualTo("hostId", studentRollNo)
+            .whereEqualTo("hostType", "student")
+            .get()
+            .addOnSuccessListener { documents ->
+                val list = documents.documents.mapNotNull { doc ->
+                    doc.toObject(VisitorRequest::class.java)?.let { request ->
+                        if (request.requestId.isEmpty()) request.copy(requestId = doc.id) else request
+                    }
+                }
+                myGuestsAdapter.updateData(list)
+                myGuestsEmptyView?.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+            }
+            .addOnFailureListener { e ->
+                Log.e("StudentRequest", "Failed to load my guests", e)
+                myGuestsEmptyView?.visibility = View.VISIBLE
+                Toast.makeText(this, "Unable to load guest history", Toast.LENGTH_SHORT).show()
+            }
+    }
+
     private fun loadUserProfile() {
         val uid = auth.currentUser?.uid
+        studentUid = uid ?: ""
         if (uid.isNullOrEmpty()) {
             Toast.makeText(this, "Please log in again to submit a guest pass", Toast.LENGTH_LONG).show()
             return
@@ -118,6 +248,9 @@ class StudentRequestActivity : AppCompatActivity() {
             docId
         )
         binding.btnSubmit.isEnabled = studentRollNo.isNotEmpty()
+        if (binding.bottomNavigation.selectedItemId == R.id.nav_my_guests) {
+            fetchMyGuestsLog()
+        }
     }
 
     private fun showDatePicker() {

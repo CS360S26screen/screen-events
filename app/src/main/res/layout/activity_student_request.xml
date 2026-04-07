@@ -109,7 +109,6 @@
                     android:layout_height="wrap_content"
                     android:inputType="textPersonName"
                     android:paddingVertical="18dp"
-                    android:text="M. Usman Tahir"
                     android:textColor="#1D1B20" />
             </com.google.android.material.textfield.TextInputLayout>
 

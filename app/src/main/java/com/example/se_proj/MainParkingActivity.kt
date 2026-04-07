@@ -7,9 +7,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import com.example.se_proj.databinding.ActivityMainParkingBinding
+import com.example.se_proj.rules.ParkingOccupancyUtils
 import com.google.firebase.Firebase
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 
 class MainParkingActivity : AppCompatActivity() {
 
@@ -24,6 +25,7 @@ class MainParkingActivity : AppCompatActivity() {
         setupToolbar()
         setupDrawer()
         setupBottomNavigation()
+    ensureParkingDocument()
         setupParkingCounter()
 
         binding.btnParkingPlus.setOnClickListener { updateParking(1) }
@@ -109,8 +111,41 @@ class MainParkingActivity : AppCompatActivity() {
             }
     }
 
+    private fun ensureParkingDocument() {
+        val docRef = db.collection("system_metadata").document("parking_status")
+        docRef.get().addOnSuccessListener { snapshot ->
+            if (!snapshot.exists()) {
+                docRef.set(mapOf("currentOccupancy" to 0L, "maxCapacity" to 200L))
+            }
+        }
+    }
+
     private fun updateParking(delta: Long) {
-        db.collection("system_metadata").document("parking_status")
-            .update("currentOccupancy", FieldValue.increment(delta))
+        val documentRef = db.collection("system_metadata").document("parking_status")
+
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(documentRef)
+            val currentOccupancy = if (snapshot.exists()) snapshot.getLong("currentOccupancy") ?: 0L else 0L
+            val maxCapacity = if (snapshot.exists()) snapshot.getLong("maxCapacity") ?: 200L else 200L
+
+            val updatedOccupancy = ParkingOccupancyUtils.clampOccupancy(currentOccupancy, delta, maxCapacity)
+
+            if (!snapshot.exists()) {
+                transaction.set(documentRef, mapOf(
+                    "currentOccupancy" to updatedOccupancy,
+                    "maxCapacity" to maxCapacity
+                ))
+            } else {
+                transaction.update(documentRef, "currentOccupancy", updatedOccupancy)
+            }
+            null
+        }.addOnFailureListener { e ->
+            val errorMsg = if (e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                "Permission denied for parking update"
+            } else {
+                "Unable to update parking: ${e.message}"
+            }
+            Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show()
+        }
     }
 }

@@ -105,7 +105,7 @@
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="-1" />
+                            android:text="-1 Exit" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnParkingPlus"
@@ -113,7 +113,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
-                            android:text="+1" />
+                            android:text="+1 Entry" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
