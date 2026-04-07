@@ -74,6 +74,7 @@ public final class AuditLogUtils {
                 request.getHostId(),
                 "OVERSTAYING",
                 "Scheduled exit: " + request.getEndTime(),
+                request.getCreatorId(),
                 Timestamp.now()
         );
     }

@@ -34,7 +34,12 @@ class StudentRequestActivity : AppCompatActivity() {
         binding = ActivityStudentRequestBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.toolbar.setNavigationOnClickListener {
+            val intent = Intent(this, MainActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
+            finish()
+        }
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_logout -> {
@@ -49,7 +54,7 @@ class StudentRequestActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnSubmit.isEnabled = false
+        binding.toolbar.navigationIcon = null
         loadUserProfile()
 
         binding.etVisitDate.setOnClickListener { showDatePicker() }

@@ -20,6 +20,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import java.time.LocalDate
 import java.time.LocalTime
 import java.text.SimpleDateFormat
@@ -110,15 +111,15 @@ class GuardDashboardActivity : AppCompatActivity() {
     private fun setupParkingCounter() {
         val docRef = db.collection("system_metadata").document("parking_status")
 
-        // Ensure the parking document exists
-        docRef.get().addOnSuccessListener { snapshot ->
-            if (!snapshot.exists()) {
-                docRef.set(mapOf("currentOccupancy" to 0L, "maxCapacity" to 200L))
-            }
-        }
-
         docRef.addSnapshotListener { snapshot, e ->
-            if (e != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
+            if (e != null) {
+                Log.e("GuardDashboard", "Listen to parking failed", e)
+                return@addSnapshotListener
+            }
+            if (snapshot == null || !snapshot.exists()) {
+                binding.tvParkingCounter.text = "Parking Status Unavailable"
+                return@addSnapshotListener
+            }
             val occupancy = snapshot.getLong("currentOccupancy") ?: 0
             val capacity = snapshot.getLong("maxCapacity") ?: 200
             binding.tvParkingCounter.text = ParkingOccupancyUtils.formatCounter(occupancy, capacity)
@@ -257,28 +258,42 @@ class GuardDashboardActivity : AppCompatActivity() {
             hostId = request.hostId,
             action = action,
             reason = reason,
+            creatorId = FirebaseAuth.getInstance().currentUser?.uid ?: "",
             timestamp = Timestamp.now()
         )
         db.collection("access_logs").add(log)
+            .addOnFailureListener { e ->
+                Log.e("GuardDashboard", "Audit logging failed: ${e.message}")
+            }
     }
 
     private fun updateParking(delta: Long) {
         val documentRef = db.collection("system_metadata").document("parking_status")
+        
+        // Using a transaction to ensure atomic update and clamping
         db.runTransaction { transaction ->
             val snapshot = transaction.get(documentRef)
             if (!snapshot.exists()) {
-                val initial = if (delta > 0) delta else 0L
-                transaction.set(documentRef, mapOf("currentOccupancy" to initial, "maxCapacity" to 200L))
-            } else {
-                val currentOccupancy = snapshot.getLong("currentOccupancy") ?: 0
-                val maxCapacity = snapshot.getLong("maxCapacity") ?: 200
-                val updatedOccupancy = ParkingOccupancyUtils.clampOccupancy(currentOccupancy, delta, maxCapacity)
-                transaction.update(documentRef, "currentOccupancy", updatedOccupancy)
+                throw FirebaseFirestoreException("Parking document missing", FirebaseFirestoreException.Code.NOT_FOUND)
             }
+            
+            val currentOccupancy = snapshot.getLong("currentOccupancy") ?: 0
+            val maxCapacity = snapshot.getLong("maxCapacity") ?: 200
+            
+            val updatedOccupancy = ParkingOccupancyUtils.clampOccupancy(currentOccupancy, delta, maxCapacity)
+            
+            transaction.update(documentRef, "currentOccupancy", updatedOccupancy)
             null
+        }.addOnSuccessListener {
+            Log.d("GuardDashboard", "Parking updated successfully by $delta")
         }.addOnFailureListener { e ->
             Log.e("GuardDashboard", "Parking update failed", e)
-            Toast.makeText(this, "Unable to update parking occupancy: ${e.message}", Toast.LENGTH_SHORT).show()
+            val errorMsg = if (e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                "Permission Denied: Only Admins can update parking settings."
+            } else {
+                "Unable to update parking: ${e.message}"
+            }
+            Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show()
         }
     }
 }

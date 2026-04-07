@@ -112,13 +112,14 @@ class FacultyRequestsActivity : AppCompatActivity() {
     }
 
     private fun showEditOptions(request: VisitorRequest) {
-        val options = arrayOf("Change Visit Date", "Change Start Time")
+        val options = arrayOf("Change Visit Date", "Change Start Time", "Change End Time")
         AlertDialog.Builder(this)
             .setTitle("Edit Request")
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> showDatePicker(request)
-                    1 -> showTimePicker(request)
+                    1 -> showTimePicker(request, "startTime")
+                    2 -> showTimePicker(request, "endTime")
                 }
             }
             .show()
@@ -132,11 +133,11 @@ class FacultyRequestsActivity : AppCompatActivity() {
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
     }
 
-    private fun showTimePicker(request: VisitorRequest) {
+    private fun showTimePicker(request: VisitorRequest, field: String) {
         val calendar = Calendar.getInstance()
         TimePickerDialog(this, { _, hourOfDay, minute ->
-            val newStartTime = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute)
-            updateRequestField(request.requestId, "startTime", newStartTime)
+            val newTime = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute)
+            updateRequestField(request.requestId, field, newTime)
         }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show()
     }
 

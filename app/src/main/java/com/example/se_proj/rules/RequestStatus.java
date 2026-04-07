@@ -23,7 +23,9 @@ public final class RequestStatus {
 
     public static boolean canEdit(String status) {
         String normalized = normalize(status);
-        return PENDING.equals(normalized) || APPROVED.equals(normalized);
+        return PENDING.equals(normalized) 
+                || APPROVED.equals(normalized) 
+                || PENDING_ADHOC.equals(normalized);
     }
 
     public static boolean canCancel(String status, boolean onCampus) {

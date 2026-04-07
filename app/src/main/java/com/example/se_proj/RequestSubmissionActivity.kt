@@ -285,7 +285,10 @@ class RequestSubmissionActivity : AppCompatActivity() {
             .add(request)
             .addOnSuccessListener {
                 Toast.makeText(this, "Request Submitted Successfully", Toast.LENGTH_SHORT).show()
-                clearForm()
+                val intent = Intent(this, MainActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                startActivity(intent)
+                finish()
             }
             .addOnFailureListener { e ->
                 binding.btnSubmit.isEnabled = true

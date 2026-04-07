@@ -86,36 +86,15 @@ class WalkInRegistrationActivity : AppCompatActivity() {
         binding.btnSubmitWalkIn.isEnabled = false
 
         db.collection("visitor_requests")
-            .whereEqualTo("creatorId", uid)
-            .whereEqualTo("guestCNIC", cnic)
-            .whereEqualTo("visitDate", currentDate)
-            .get()
-            .addOnSuccessListener { documents ->
-                val hasDuplicate = documents.toObjects(VisitorRequest::class.java).any {
-                    RequestValidationUtils.matchesDuplicateCandidate(it, hostId, cnic, currentDate)
-                }
-                if (hasDuplicate) {
-                    binding.btnSubmitWalkIn.isEnabled = true
-                    Toast.makeText(this, "A walk-in request already exists for this guest today", Toast.LENGTH_LONG).show()
-                    return@addOnSuccessListener
-                }
-
-                db.collection("visitor_requests")
-                    .add(request)
-                    .addOnSuccessListener { documentReference ->
-                        Toast.makeText(this, "Request sent to Faculty for approval", Toast.LENGTH_SHORT).show()
-                        listenForApproval(documentReference.id)
-                    }
-                    .addOnFailureListener { e ->
-                        binding.btnSubmitWalkIn.isEnabled = true
-                        Log.e("WalkIn", "Failed to send request", e)
-                        Toast.makeText(this, "Failed to send request: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
+            .add(request)
+            .addOnSuccessListener { documentReference ->
+                Toast.makeText(this, "Request sent to Faculty for approval", Toast.LENGTH_SHORT).show()
+                listenForApproval(documentReference.id)
             }
             .addOnFailureListener { e ->
-                binding.btnSubmitWalkIn.isEnabled = true
-                Log.e("WalkIn", "Failed to validate request", e)
-                Toast.makeText(this, "Failed to validate request: ${e.message}", Toast.LENGTH_SHORT).show()
+                binding.btnSubmitWalkIn.isEnabled = false
+                Log.e("WalkIn", "Failed to send request", e)
+                Toast.makeText(this, "Failed to send request: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
 

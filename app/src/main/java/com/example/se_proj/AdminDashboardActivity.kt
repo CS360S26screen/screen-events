@@ -43,6 +43,7 @@ class AdminDashboardActivity : AppCompatActivity() {
 
         setupRecyclerView()
         setupSummaryStats()
+        ensureParkingDocument()
         fetchPendingRequests()
 
         binding.btnViewAudit.setOnClickListener {
@@ -80,7 +81,7 @@ class AdminDashboardActivity : AppCompatActivity() {
 
     private fun fetchPendingRequests() {
         db.collection("visitor_requests")
-            .whereEqualTo("status", RequestStatus.PENDING)
+            .whereIn("status", listOf(RequestStatus.PENDING, RequestStatus.PENDING_ADHOC))
             .addSnapshotListener { snapshots, e ->
                 if (e != null) {
                     Log.w("AdminDashboard", "Listen failed.", e)
@@ -106,7 +107,13 @@ class AdminDashboardActivity : AppCompatActivity() {
     }
 
     private fun updateRequestStatus(request: VisitorRequest, newStatus: String) {
-        db.collection("visitor_requests").document(request.requestId)
+        val requestId = request.requestId
+        if (requestId.isEmpty()) {
+            Toast.makeText(this, "Error: Request ID is missing", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        db.collection("visitor_requests").document(requestId)
             .update("status", newStatus)
             .addOnSuccessListener {
                 logAdminAction(request, newStatus.uppercase())
@@ -114,7 +121,7 @@ class AdminDashboardActivity : AppCompatActivity() {
             }
             .addOnFailureListener { error ->
                 Log.e("AdminDashboard", "Failed to update request status", error)
-                Toast.makeText(this, "Failed to update request", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Permission Denied or Network Error", Toast.LENGTH_SHORT).show()
             }
     }
 
@@ -125,8 +132,18 @@ class AdminDashboardActivity : AppCompatActivity() {
             hostId = request.hostId,
             action = "ADMIN_$action",
             reason = "Action taken by Security Admin",
+            creatorId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "",
             timestamp = Timestamp.now()
         )
         db.collection("access_logs").add(log)
+    }
+
+    private fun ensureParkingDocument() {
+        val docRef = db.collection("system_metadata").document("parking_status")
+        docRef.get().addOnSuccessListener { snapshot ->
+            if (!snapshot.exists()) {
+                docRef.set(mapOf("currentOccupancy" to 0L, "maxCapacity" to 200L))
+            }
+        }
     }
 }

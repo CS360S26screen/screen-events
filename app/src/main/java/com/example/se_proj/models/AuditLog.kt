@@ -9,7 +9,8 @@ data class AuditLog(
     val visitorName: String = "",
     val visitorCNIC: String = "",
     val hostId: String = "",
-    val action: String = "", // Entry, Exit, Denied
-    val reason: String = "", // if denied
+    val action: String = "", // Entry, Exit, Denied, ADMIN_APPROVED, etc.
+    val reason: String = "", // if denied or override
+    val creatorId: String = "", // UID of the person who took the action
     val timestamp: Timestamp = Timestamp.now()
 )

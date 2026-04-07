@@ -94,6 +94,7 @@ public class AuditLogUtilsTest {
                 "FAC-1",
                 action,
                 action.equals("Denied") ? "Expired Window" : "",
+                "test-creator",
                 new Timestamp(millis / 1000, 0)
         );
     }
