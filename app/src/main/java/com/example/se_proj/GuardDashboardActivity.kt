@@ -53,6 +53,7 @@ class GuardDashboardActivity : AppCompatActivity() {
             }
         }
 
+        ensureParkingDocument()
         setupParkingCounter()
 
         binding.btnSearchCnic.setOnClickListener {
@@ -116,13 +117,19 @@ class GuardDashboardActivity : AppCompatActivity() {
                 Log.e("GuardDashboard", "Listen to parking failed", e)
                 return@addSnapshotListener
             }
+            
+            val occupancy: Long
+            val capacity: Long
+            
             if (snapshot == null || !snapshot.exists()) {
-                binding.tvParkingCounter.text = "Parking Status Unavailable"
-                return@addSnapshotListener
+                occupancy = 0L
+                capacity = 200L
+                binding.tvParkingCounter.text = "Initializing Parking..."
+            } else {
+                occupancy = snapshot.getLong("currentOccupancy") ?: 0L
+                capacity = snapshot.getLong("maxCapacity") ?: 200L
+                binding.tvParkingCounter.text = ParkingOccupancyUtils.formatCounter(occupancy, capacity)
             }
-            val occupancy = snapshot.getLong("currentOccupancy") ?: 0
-            val capacity = snapshot.getLong("maxCapacity") ?: 200
-            binding.tvParkingCounter.text = ParkingOccupancyUtils.formatCounter(occupancy, capacity)
 
             binding.pbParking.max = capacity.toInt()
             binding.pbParking.progress = occupancy.toInt()
@@ -134,6 +141,18 @@ class GuardDashboardActivity : AppCompatActivity() {
                 else -> R.color.primary_purple
             }
             binding.pbParking.setIndicatorColor(ContextCompat.getColor(this, color))
+        }
+    }
+
+    private fun ensureParkingDocument() {
+        val docRef = db.collection("system_metadata").document("parking_status")
+        docRef.get().addOnSuccessListener { snapshot ->
+            if (!snapshot.exists()) {
+                docRef.set(mapOf("currentOccupancy" to 0L, "maxCapacity" to 200L))
+                    .addOnFailureListener { e ->
+                        Log.e("GuardDashboard", "Failed to initialize parking document", e)
+                    }
+            }
         }
     }
 
@@ -273,19 +292,23 @@ class GuardDashboardActivity : AppCompatActivity() {
         // Using a transaction to ensure atomic update and clamping
         db.runTransaction { transaction ->
             val snapshot = transaction.get(documentRef)
-            if (!snapshot.exists()) {
-                throw FirebaseFirestoreException("Parking document missing", FirebaseFirestoreException.Code.NOT_FOUND)
-            }
             
-            val currentOccupancy = snapshot.getLong("currentOccupancy") ?: 0
-            val maxCapacity = snapshot.getLong("maxCapacity") ?: 200
+            val currentOccupancy = if (snapshot.exists()) snapshot.getLong("currentOccupancy") ?: 0L else 0L
+            val maxCapacity = if (snapshot.exists()) snapshot.getLong("maxCapacity") ?: 200L else 200L
             
             val updatedOccupancy = ParkingOccupancyUtils.clampOccupancy(currentOccupancy, delta, maxCapacity)
             
-            transaction.update(documentRef, "currentOccupancy", updatedOccupancy)
+            if (!snapshot.exists()) {
+                transaction.set(documentRef, mapOf(
+                    "currentOccupancy" to updatedOccupancy,
+                    "maxCapacity" to maxCapacity
+                ))
+            } else {
+                transaction.update(documentRef, "currentOccupancy", updatedOccupancy)
+            }
             null
         }.addOnSuccessListener {
-            Log.d("GuardDashboard", "Parking updated successfully by $delta")
+            Log.d("GuardDashboard", "Parking updated successfully")
         }.addOnFailureListener { e ->
             Log.e("GuardDashboard", "Parking update failed", e)
             val errorMsg = if (e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {

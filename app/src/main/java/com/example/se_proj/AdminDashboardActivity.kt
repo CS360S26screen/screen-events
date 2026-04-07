@@ -88,28 +88,27 @@ class AdminDashboardActivity : AppCompatActivity() {
                     return@addSnapshotListener
                 }
                 val pendingList = snapshots?.documents?.mapNotNull { doc ->
-                    doc.toObject(VisitorRequest::class.java)?.let { request ->
-                        if (request.requestId.isEmpty()) request.copy(requestId = doc.id) else request
-                    }
+                    val request = doc.toObject(VisitorRequest::class.java)
+                    // Explicitly set the requestId from the document ID if it's missing
+                    request?.copy(requestId = doc.id)
                 } ?: emptyList()
                 adapter.updateData(pendingList)
             }
     }
 
     private fun handleApprove(request: VisitorRequest) {
-        if (request.requestId.isEmpty()) return
         updateRequestStatus(request, RequestStatus.APPROVED)
     }
 
     private fun handleReject(request: VisitorRequest) {
-        if (request.requestId.isEmpty()) return
         updateRequestStatus(request, RequestStatus.REJECTED)
     }
+
 
     private fun updateRequestStatus(request: VisitorRequest, newStatus: String) {
         val requestId = request.requestId
         if (requestId.isEmpty()) {
-            Toast.makeText(this, "Error: Request ID is missing", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Error: Request ID is missing from document", Toast.LENGTH_SHORT).show()
             return
         }
         
@@ -120,8 +119,9 @@ class AdminDashboardActivity : AppCompatActivity() {
                 Toast.makeText(this, "Request ${newStatus.replaceFirstChar { it.uppercase() }}", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener { error ->
-                Log.e("AdminDashboard", "Failed to update request status", error)
-                Toast.makeText(this, "Permission Denied or Network Error", Toast.LENGTH_SHORT).show()
+                Log.e("AdminDashboard", "Failed to update ID: $requestId", error)
+                // Change this line to see the ACTUAL error from Firebase
+                Toast.makeText(this, "Firebase Error: ${error.message}", Toast.LENGTH_LONG).show()
             }
     }
 
@@ -136,6 +136,9 @@ class AdminDashboardActivity : AppCompatActivity() {
             timestamp = Timestamp.now()
         )
         db.collection("access_logs").add(log)
+            .addOnFailureListener { e ->
+                Log.e("AdminDashboard", "Failed to write audit log", e)
+            }
     }
 
     private fun ensureParkingDocument() {
