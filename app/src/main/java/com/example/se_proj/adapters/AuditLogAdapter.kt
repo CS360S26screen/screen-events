@@ -42,16 +42,16 @@ class AuditLogAdapter(
         // Feature: Color-coded status for Admin visibility
         when {
             isOverstayView || log.action == "OVERSTAYING" -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFCDD2")) // Red tint
+                holder.binding.root.setCardBackgroundColor(Color.parseColor("#FFCDD2")) // Red tint
             }
             log.action == "Entry" -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#C8E6C9")) // Green tint
+                holder.binding.root.setCardBackgroundColor(Color.parseColor("#C8E6C9")) // Green tint
             }
             log.action == "Denied" -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.parseColor("#FFE0B2")) // Orange tint
+                holder.binding.root.setCardBackgroundColor(Color.parseColor("#FFE0B2")) // Orange tint
             }
             else -> {
-                holder.binding.cardView.setCardBackgroundColor(Color.WHITE)
+                holder.binding.root.setCardBackgroundColor(Color.WHITE)
             }
         }
     }

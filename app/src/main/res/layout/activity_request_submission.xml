@@ -1,28 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/white"
     tools:context=".RequestSubmissionActivity">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@color/campus_blue_primary">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/ic_menu"
+            app:navigationIconTint="@color/white"
             app:title="Faculty Portal"
             app:titleCentered="true"
-            app:navigationIcon="@android:drawable/ic_menu_edit" />
+            app:titleTextColor="@color/white" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/appBarLayout">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -31,20 +37,20 @@
             android:padding="24dp">
 
             <TextView
-                style="@style/TextAppearance.App.TitleLarge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:text="Guest Registration Form" />
+                android:layout_marginBottom="32dp"
+                android:text="Guest Registration"
+                android:textColor="@color/text_color_primary"
+                android:textSize="24sp"
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.App.TextInputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:hint="Guest Full Name"
-                app:startIconDrawable="@android:drawable/ic_menu_myplaces"
-                app:startIconTint="@color/primary_purple">
+                android:hint="Guest Full Name">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etGuestName"
@@ -58,9 +64,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:hint="Guest CNIC"
-                app:startIconDrawable="@android:drawable/ic_lock_lock"
-                app:startIconTint="@color/primary_purple">
+                android:hint="Guest CNIC">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etCnic"
@@ -74,15 +78,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:hint="Purpose of Visit"
-                app:startIconDrawable="@android:drawable/ic_menu_help"
-                app:startIconTint="@color/primary_purple">
+                android:hint="Purpose of Visit">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPurpose"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textMultiLine" />
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -90,9 +92,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:hint="Visit Date"
-                app:startIconDrawable="@android:drawable/ic_menu_my_calendar"
-                app:startIconTint="@color/primary_purple">
+                android:hint="Visit Date">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etVisitDate"
@@ -105,9 +105,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp"
-                android:orientation="horizontal"
-                android:baselineAligned="false">
+                android:orientation="horizontal">
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.App.TextInputLayout"
@@ -115,7 +113,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
                     android:layout_weight="1"
-                    android:hint="Start Time">
+                    android:hint="Arrival Time">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etStartTime"
@@ -131,7 +129,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
-                    android:hint="End Time">
+                    android:hint="Expiration Time">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etEndTime"
@@ -146,18 +144,18 @@
                 android:id="@+id/btnSubmit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="48dp"
                 android:text="Submit Guest Request" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnViewRequests"
-                style="@style/Widget.Material3.Button.TonalButton"
+                style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="Dashboard: My Guest Requests"
-                app:icon="@android:drawable/ic_menu_sort_by_size" />
+                android:layout_marginTop="8dp"
+                android:text="Dashboard: My Guest Requests" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

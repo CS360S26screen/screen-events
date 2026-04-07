@@ -23,7 +23,7 @@ class FacultyRequestAdapter(
         val request = requests[position]
         holder.binding.tvGuestName.text = request.guestName
         holder.binding.tvVisitInfo.text = "Date: ${request.visitDate} | ${request.startTime} - ${request.endTime}"
-        holder.binding.tvStatus.text = "Status: ${request.status.uppercase()}"
+        holder.binding.chipStatus.text = request.status.uppercase()
 
         holder.binding.btnEdit.setOnClickListener { onEditClick(request) }
         holder.binding.btnCancel.setOnClickListener { onCancelClick(request) }
