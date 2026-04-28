@@ -14,3 +14,7 @@
 .cxx
 local.properties
 .gradle-user-home/
+
+
+# making changes
+.claude
