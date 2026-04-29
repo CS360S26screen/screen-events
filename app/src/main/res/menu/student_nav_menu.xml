@@ -9,7 +9,11 @@
         android:icon="@drawable/my_guests"
         android:title="My Guests" />
     <item
-        android:id="@+id/nav_profile"
-        android:icon="@drawable/profile_icon"
-        android:title="Profile" />
+        android:id="@+id/nav_my_cars"
+        android:icon="@android:drawable/ic_menu_directions"
+        android:title="My Cars" />
+    <item
+        android:id="@+id/nav_wing_access"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Wing Access" />
 </menu>

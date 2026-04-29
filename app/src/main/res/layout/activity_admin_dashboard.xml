@@ -127,6 +127,17 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/tvPendingLabel" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWingAccess"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:text="Wing Access →"
+            app:layout_constraintBottom_toBottomOf="@id/tvPendingLabel"
+            app:layout_constraintEnd_toStartOf="@id/btnViewAudit"
+            app:layout_constraintTop_toTopOf="@id/tvPendingLabel" />
+
         <!-- Request List (Phase 3) -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvRequests"

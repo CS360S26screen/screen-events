@@ -10,18 +10,22 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.se_proj.adapters.StudentGuestLogAdapter;
+import com.example.se_proj.adapters.VehicleListAdapter;
 import com.example.se_proj.databinding.ActivityStudentRequestBinding;
+import com.example.se_proj.models.RegisteredVehicle;
 import com.example.se_proj.models.VisitorRequest;
 import com.example.se_proj.rules.RequestStatus;
 import com.example.se_proj.rules.RequestValidationUtils;
 import com.example.se_proj.rules.UserProfileUtils;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.time.LocalDate;
@@ -32,18 +36,14 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Student guest-pass submission screen with single-active-pass and time-clash protections.
+ * Student dashboard with four tabs: New Pass, My Guests, My Cars, Wing Access.
  *
- * <p>Design note: thin UI coordinator that delegates domain constraints to
- * {@link RequestValidationUtils} and user identity normalization to {@link UserProfileUtils}.</p>
- *
- * <p>Outstanding issues: profile fallback reads {@code studentId} while most flows use
- * {@code rollNumber}/{@code facultyId}; schema inconsistency should be normalized across user
- * documents.</p>
+ * <p>My Cars tab allows registering up to two vehicles (plate + model) and viewing
+ * their current on-campus status. Car registration enforces plate uniqueness across
+ * the entire system.</p>
  */
 public class StudentRequestActivity extends AppCompatActivity {
 
-    /** Callback interface for time-picker dialogs. */
     private interface OnTimeSelectedListener {
         void onTimeSelected(String time);
     }
@@ -51,11 +51,20 @@ public class StudentRequestActivity extends AppCompatActivity {
     private ActivityStudentRequestBinding binding;
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private final FirebaseAuth auth = FirebaseAuth.getInstance();
+
     private String studentRollNo = "";
     private String studentUid = "";
+    private String studentName = "";
+
+    // My Guests views (added programmatically)
     private RecyclerView myGuestsRecycler;
     private TextView myGuestsEmptyView;
     private StudentGuestLogAdapter myGuestsAdapter;
+
+    // My Cars views (added programmatically)
+    private RecyclerView carsRecycler;
+    private TextView carsEmptyView;
+    private VehicleListAdapter carsAdapter;
 
     private String selectedDate = "";
     private String selectedStartTime = "";
@@ -87,6 +96,7 @@ public class StudentRequestActivity extends AppCompatActivity {
 
         binding.toolbar.setNavigationIcon(null);
         setupMyGuestsViews();
+        setupMyCarsViews();
         setupBottomNavigation();
         loadUserProfile();
 
@@ -103,7 +113,12 @@ public class StudentRequestActivity extends AppCompatActivity {
                 }));
 
         binding.btnSubmit.setOnClickListener(v -> checkLimitAndSubmit());
+        binding.btnRegisterCar.setOnClickListener(v -> registerCar());
     }
+
+    // -------------------------------------------------------------------------
+    // Bottom navigation
+    // -------------------------------------------------------------------------
 
     private void setupBottomNavigation() {
         binding.bottomNavigation.setSelectedItemId(R.id.nav_new_pass);
@@ -115,13 +130,72 @@ public class StudentRequestActivity extends AppCompatActivity {
             } else if (id == R.id.nav_my_guests) {
                 showMyGuestsLog();
                 return true;
-            } else if (id == R.id.nav_profile) {
-                Toast.makeText(this, "Profile coming soon", Toast.LENGTH_SHORT).show();
+            } else if (id == R.id.nav_my_cars) {
+                showMyCars();
+                return true;
+            } else if (id == R.id.nav_wing_access) {
+                startActivity(new Intent(this, WingAccessRequestActivity.class));
                 return true;
             }
             return false;
         });
     }
+
+    // -------------------------------------------------------------------------
+    // Tab visibility helpers
+    // -------------------------------------------------------------------------
+
+    private void showNewPassForm() {
+        binding.tvHeader.setText("Register New Guest");
+        binding.tilGuestName.setVisibility(View.VISIBLE);
+        binding.tilCnic.setVisibility(View.VISIBLE);
+        binding.tilVisitDate.setVisibility(View.VISIBLE);
+        binding.llTimeSlots.setVisibility(View.VISIBLE);
+        binding.btnSubmit.setVisibility(View.VISIBLE);
+        binding.tilLicensePlate.setVisibility(View.GONE);
+        binding.tilCarModel.setVisibility(View.GONE);
+        binding.btnRegisterCar.setVisibility(View.GONE);
+        if (myGuestsRecycler != null) myGuestsRecycler.setVisibility(View.GONE);
+        if (myGuestsEmptyView != null) myGuestsEmptyView.setVisibility(View.GONE);
+        if (carsRecycler != null) carsRecycler.setVisibility(View.GONE);
+        if (carsEmptyView != null) carsEmptyView.setVisibility(View.GONE);
+    }
+
+    private void showMyGuestsLog() {
+        binding.tvHeader.setText("My Guests");
+        binding.tilGuestName.setVisibility(View.GONE);
+        binding.tilCnic.setVisibility(View.GONE);
+        binding.tilVisitDate.setVisibility(View.GONE);
+        binding.llTimeSlots.setVisibility(View.GONE);
+        binding.btnSubmit.setVisibility(View.GONE);
+        binding.tilLicensePlate.setVisibility(View.GONE);
+        binding.tilCarModel.setVisibility(View.GONE);
+        binding.btnRegisterCar.setVisibility(View.GONE);
+        if (carsRecycler != null) carsRecycler.setVisibility(View.GONE);
+        if (carsEmptyView != null) carsEmptyView.setVisibility(View.GONE);
+        if (myGuestsRecycler != null) myGuestsRecycler.setVisibility(View.VISIBLE);
+        fetchMyGuestsLog();
+    }
+
+    private void showMyCars() {
+        binding.tvHeader.setText("My Cars");
+        binding.tilGuestName.setVisibility(View.GONE);
+        binding.tilCnic.setVisibility(View.GONE);
+        binding.tilVisitDate.setVisibility(View.GONE);
+        binding.llTimeSlots.setVisibility(View.GONE);
+        binding.btnSubmit.setVisibility(View.GONE);
+        if (myGuestsRecycler != null) myGuestsRecycler.setVisibility(View.GONE);
+        if (myGuestsEmptyView != null) myGuestsEmptyView.setVisibility(View.GONE);
+        binding.tilLicensePlate.setVisibility(View.VISIBLE);
+        binding.tilCarModel.setVisibility(View.VISIBLE);
+        binding.btnRegisterCar.setVisibility(View.VISIBLE);
+        if (carsRecycler != null) carsRecycler.setVisibility(View.VISIBLE);
+        loadMyCars();
+    }
+
+    // -------------------------------------------------------------------------
+    // My Guests
+    // -------------------------------------------------------------------------
 
     private void setupMyGuestsViews() {
         View child1 = binding.getRoot().getChildAt(1);
@@ -163,28 +237,6 @@ public class StudentRequestActivity extends AppCompatActivity {
         myGuestsEmptyView.setLayoutParams(emptyParams);
     }
 
-    private void showNewPassForm() {
-        binding.tvHeader.setText("Register New Guest");
-        binding.tilGuestName.setVisibility(View.VISIBLE);
-        binding.tilCnic.setVisibility(View.VISIBLE);
-        binding.tilVisitDate.setVisibility(View.VISIBLE);
-        binding.llTimeSlots.setVisibility(View.VISIBLE);
-        binding.btnSubmit.setVisibility(View.VISIBLE);
-        if (myGuestsRecycler != null) myGuestsRecycler.setVisibility(View.GONE);
-        if (myGuestsEmptyView != null) myGuestsEmptyView.setVisibility(View.GONE);
-    }
-
-    private void showMyGuestsLog() {
-        binding.tvHeader.setText("My Guests");
-        binding.tilGuestName.setVisibility(View.GONE);
-        binding.tilCnic.setVisibility(View.GONE);
-        binding.tilVisitDate.setVisibility(View.GONE);
-        binding.llTimeSlots.setVisibility(View.GONE);
-        binding.btnSubmit.setVisibility(View.GONE);
-        if (myGuestsRecycler != null) myGuestsRecycler.setVisibility(View.VISIBLE);
-        fetchMyGuestsLog();
-    }
-
     private void fetchMyGuestsLog() {
         if (studentRollNo.isBlank()) {
             myGuestsAdapter.updateData(new ArrayList<>());
@@ -198,7 +250,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(documents -> {
                     List<VisitorRequest> list = new ArrayList<>();
-                    for (com.google.firebase.firestore.DocumentSnapshot doc : documents.getDocuments()) {
+                    for (DocumentSnapshot doc : documents.getDocuments()) {
                         VisitorRequest request = doc.toObject(VisitorRequest.class);
                         if (request != null) {
                             if (request.getRequestId().isEmpty()) {
@@ -219,12 +271,189 @@ public class StudentRequestActivity extends AppCompatActivity {
                 });
     }
 
+    // -------------------------------------------------------------------------
+    // My Cars
+    // -------------------------------------------------------------------------
+
+    private void setupMyCarsViews() {
+        View child1 = binding.getRoot().getChildAt(1);
+        if (!(child1 instanceof androidx.core.widget.NestedScrollView)) return;
+        View scrollChild = ((androidx.core.widget.NestedScrollView) child1).getChildAt(0);
+        if (!(scrollChild instanceof ConstraintLayout)) return;
+        ConstraintLayout contentRoot = (ConstraintLayout) scrollChild;
+
+        carsAdapter = new VehicleListAdapter(new ArrayList<>(), this::confirmDeleteVehicle);
+
+        carsRecycler = new RecyclerView(this);
+        carsRecycler.setId(View.generateViewId());
+        carsRecycler.setLayoutManager(new LinearLayoutManager(this));
+        carsRecycler.setAdapter(carsAdapter);
+        carsRecycler.setVisibility(View.GONE);
+
+        carsEmptyView = new TextView(this);
+        carsEmptyView.setId(View.generateViewId());
+        carsEmptyView.setText("No cars registered yet.");
+        carsEmptyView.setTextSize(14f);
+        carsEmptyView.setVisibility(View.GONE);
+
+        contentRoot.addView(carsRecycler);
+        contentRoot.addView(carsEmptyView);
+
+        ConstraintLayout.LayoutParams recyclerParams = new ConstraintLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        recyclerParams.topToBottom = R.id.btnRegisterCar;
+        recyclerParams.topMargin = 16;
+        carsRecycler.setLayoutParams(recyclerParams);
+
+        ConstraintLayout.LayoutParams emptyParams = new ConstraintLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        emptyParams.topToBottom = R.id.btnRegisterCar;
+        emptyParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+        emptyParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+        emptyParams.topMargin = 48;
+        carsEmptyView.setLayoutParams(emptyParams);
+    }
+
+    private void loadMyCars() {
+        if (studentUid.isEmpty()) {
+            if (carsEmptyView != null) carsEmptyView.setVisibility(View.VISIBLE);
+            return;
+        }
+
+        db.collection("registered_vehicles")
+                .whereEqualTo("studentUid", studentUid)
+                .addSnapshotListener((snapshots, e) -> {
+                    if (e != null) {
+                        Log.e("StudentRequest", "Failed to load cars", e);
+                        return;
+                    }
+                    List<RegisteredVehicle> list = new ArrayList<>();
+                    if (snapshots != null) {
+                        for (DocumentSnapshot doc : snapshots.getDocuments()) {
+                            RegisteredVehicle v = doc.toObject(RegisteredVehicle.class);
+                            if (v != null) list.add(v);
+                        }
+                    }
+                    carsAdapter.updateData(list);
+                    if (carsEmptyView != null) {
+                        carsEmptyView.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
+                    }
+                });
+    }
+
+    private void registerCar() {
+        String plate = binding.etLicensePlate.getText() != null
+                ? binding.etLicensePlate.getText().toString().trim().toUpperCase() : "";
+        String model = binding.etCarModel.getText() != null
+                ? binding.etCarModel.getText().toString().trim() : "";
+
+        if (plate.isEmpty() || model.isEmpty()) {
+            Toast.makeText(this, "Please fill in license plate and car model",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (studentUid.isEmpty()) {
+            Toast.makeText(this, "Your profile is still loading", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        binding.btnRegisterCar.setEnabled(false);
+
+        // Check 2-car limit first
+        db.collection("registered_vehicles")
+                .whereEqualTo("studentUid", studentUid)
+                .get()
+                .addOnSuccessListener(countSnap -> {
+                    if (countSnap.size() >= 2) {
+                        Toast.makeText(this, "Maximum 2 vehicles allowed per student",
+                                Toast.LENGTH_SHORT).show();
+                        binding.btnRegisterCar.setEnabled(true);
+                        return;
+                    }
+
+                    // Check plate uniqueness across all students
+                    db.collection("registered_vehicles")
+                            .whereEqualTo("licensePlate", plate)
+                            .get()
+                            .addOnSuccessListener(plateSnap -> {
+                                if (!plateSnap.isEmpty()) {
+                                    Toast.makeText(this,
+                                            "License plate already registered in the system",
+                                            Toast.LENGTH_SHORT).show();
+                                    binding.btnRegisterCar.setEnabled(true);
+                                    return;
+                                }
+                                saveVehicle(plate, model);
+                            })
+                            .addOnFailureListener(e -> {
+                                Toast.makeText(this, "Error: " + e.getMessage(),
+                                        Toast.LENGTH_SHORT).show();
+                                binding.btnRegisterCar.setEnabled(true);
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    binding.btnRegisterCar.setEnabled(true);
+                });
+    }
+
+    private void saveVehicle(String plate, String model) {
+        RegisteredVehicle vehicle = new RegisteredVehicle(
+                "", studentRollNo, studentName, studentUid,
+                plate, model, false, null, null
+        );
+
+        db.collection("registered_vehicles").add(vehicle)
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "Car registered", Toast.LENGTH_SHORT).show();
+                    clearCarForm();
+                    binding.btnRegisterCar.setEnabled(true);
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    binding.btnRegisterCar.setEnabled(true);
+                });
+    }
+
+    private void confirmDeleteVehicle(RegisteredVehicle vehicle) {
+        if (vehicle.isOnCampus()) {
+            Toast.makeText(this,
+                    "Cannot remove a car that is currently on campus",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Remove Vehicle")
+                .setMessage("Remove " + vehicle.getLicensePlate()
+                        + " (" + vehicle.getCarModel() + ")?")
+                .setPositiveButton("Remove", (d, w) ->
+                        db.collection("registered_vehicles")
+                                .document(vehicle.getVehicleId())
+                                .delete()
+                                .addOnSuccessListener(u ->
+                                        Toast.makeText(this, "Vehicle removed",
+                                                Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e ->
+                                        Toast.makeText(this, "Failed: " + e.getMessage(),
+                                                Toast.LENGTH_SHORT).show()))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void clearCarForm() {
+        if (binding.etLicensePlate.getText() != null) binding.etLicensePlate.getText().clear();
+        if (binding.etCarModel.getText() != null) binding.etCarModel.getText().clear();
+    }
+
+    // -------------------------------------------------------------------------
+    // User profile
+    // -------------------------------------------------------------------------
+
     private void loadUserProfile() {
         String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
         studentUid = uid != null ? uid : "";
         if (uid == null || uid.isEmpty()) {
-            Toast.makeText(this, "Please log in again to submit a guest pass",
-                    Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Please log in again", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -239,8 +468,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                             db.collection("Users").whereEqualTo("email", email).get()
                                     .addOnSuccessListener(query -> {
                                         if (!query.isEmpty()) {
-                                            com.google.firebase.firestore.DocumentSnapshot d =
-                                                    query.getDocuments().get(0);
+                                            DocumentSnapshot d = query.getDocuments().get(0);
                                             setupProfileData(d.getId(), d.getData());
                                         } else {
                                             Toast.makeText(this, "User profile not found",
@@ -261,13 +489,24 @@ public class StudentRequestActivity extends AppCompatActivity {
                 ? data.get("rollNumber").toString() : null;
         String studentId = (data != null && data.get("studentId") != null)
                 ? data.get("studentId").toString() : null;
+        String name = (data != null && data.get("name") != null)
+                ? data.get("name").toString() : null;
 
         studentRollNo = UserProfileUtils.resolveHostId(rollNumber, studentId, docId);
+        studentName = name != null ? name : "";
         binding.btnSubmit.setEnabled(!studentRollNo.isEmpty());
-        if (binding.bottomNavigation.getSelectedItemId() == R.id.nav_my_guests) {
+
+        int selectedNavId = binding.bottomNavigation.getSelectedItemId();
+        if (selectedNavId == R.id.nav_my_guests) {
             fetchMyGuestsLog();
+        } else if (selectedNavId == R.id.nav_my_cars) {
+            loadMyCars();
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Guest pass form
+    // -------------------------------------------------------------------------
 
     private void showDatePicker() {
         Calendar calendar = Calendar.getInstance();
@@ -368,7 +607,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                 .add(request)
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "Request Submitted for Approval", Toast.LENGTH_SHORT).show();
-                    clearForm();
+                    clearGuestForm();
                 })
                 .addOnFailureListener(e -> {
                     binding.btnSubmit.setEnabled(true);
@@ -377,7 +616,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                 });
     }
 
-    private void clearForm() {
+    private void clearGuestForm() {
         if (binding.etGuestName.getText() != null) binding.etGuestName.getText().clear();
         if (binding.etCnic.getText() != null) binding.etCnic.getText().clear();
         if (binding.etVisitDate.getText() != null) binding.etVisitDate.getText().clear();

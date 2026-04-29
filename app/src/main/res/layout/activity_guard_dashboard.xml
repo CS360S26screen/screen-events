@@ -183,6 +183,45 @@
                 android:text="No approved request found."
                 android:visibility="gone" />
 
+            <!-- Car Exit section -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="28dp"
+                android:background="@color/border_color" />
+
+            <TextView
+                style="@style/TextAppearance.App.TitleLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Car Exit" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilCarExitPlate"
+                style="@style/Widget.App.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="License Plate"
+                app:startIconDrawable="@android:drawable/ic_menu_directions"
+                app:startIconTint="@color/primary_purple">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etCarExitPlate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapCharacters" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFindCar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="32dp"
+                android:text="Find &amp; Check Out Car" />
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

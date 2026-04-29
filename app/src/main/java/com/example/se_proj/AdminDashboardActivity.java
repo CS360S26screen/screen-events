@@ -65,6 +65,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         binding.btnViewAudit.setOnClickListener(v ->
                 startActivity(new Intent(this, AdminAuditActivity.class)));
+
+        binding.btnWingAccess.setOnClickListener(v ->
+                startActivity(new Intent(this, AdminWingAccessActivity.class)));
     }
 
     private void setupRecyclerView() {
