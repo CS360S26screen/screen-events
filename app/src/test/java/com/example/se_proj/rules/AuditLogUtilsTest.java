@@ -2,6 +2,7 @@ package com.example.se_proj.rules;
 
 import com.example.se_proj.models.AuditLog;
 import com.example.se_proj.models.VisitorRequest;
+import com.example.se_proj.models.ZoneAccessLog;
 import com.google.firebase.Timestamp;
 
 import org.junit.Test;
@@ -84,6 +85,30 @@ public class AuditLogUtilsTest {
         assertEquals("FAC-1", auditLog.getHostId());
         assertEquals("OVERSTAYING", auditLog.getAction());
         assertEquals("Scheduled exit: 11:00", auditLog.getReason());
+    }
+
+    @Test
+    public void toZoneAccessAuditLog_copiesLocationOutcomeAndReasonIntoAuditEntry() {
+        ZoneAccessLog zoneLog = new ZoneAccessLog(
+                "3520212345671",
+                ZoneAccessLogger.ENTITY_TYPE_PERSON,
+                "Guest One",
+                "lab_a",
+                ZoneAccessLog.ACTION_DENIED,
+                ZoneAccessLog.OUTCOME_FAILURE,
+                "Not on authorization list",
+                "guard-1",
+                "req-1"
+        );
+
+        AuditLog auditLog = AuditLogUtils.toZoneAccessAuditLog(zoneLog);
+
+        assertEquals("Guest One", auditLog.getVisitorName());
+        assertEquals("3520212345671", auditLog.getVisitorCNIC());
+        assertEquals("lab_a", auditLog.getHostId());
+        assertEquals(ZoneAccessLog.ACTION_DENIED, auditLog.getAction());
+        assertEquals("Not on authorization list | Location: lab_a", auditLog.getReason());
+        assertEquals("guard-1", auditLog.getCreatorId());
     }
 
     private static AuditLog log(String id, String action, long millis) {

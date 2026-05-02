@@ -3,47 +3,61 @@ package com.example.se_proj;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.se_proj.adapters.VisitorRequestAdapter;
 import com.example.se_proj.databinding.ActivityAdminDashboardBinding;
 import com.example.se_proj.models.AuditLog;
+import com.example.se_proj.models.BlacklistEntry;
 import com.example.se_proj.models.VisitorRequest;
+import com.example.se_proj.rules.BlacklistService;
 import com.example.se_proj.rules.RequestStatus;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
- * Admin control panel for approving/rejecting visitor requests and monitoring live summary stats.
- *
- * <p>Design note: controller-style Activity that binds Firestore listeners to UI widgets and emits
- * audit events for admin actions.</p>
- *
- * <p>Outstanding issues: status changes and audit-log writes are separate operations (not atomic),
- * so partial failure can leave request state and audit trail temporarily inconsistent.</p>
+ * Admin control panel for approving/rejecting visitor requests, monitoring live stats,
+ * and managing the blacklist (US19).
  */
 public class AdminDashboardActivity extends AppCompatActivity {
+
+    private static final String TAG = "AdminDashboard";
 
     private ActivityAdminDashboardBinding binding;
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private VisitorRequestAdapter adapter;
+    private BlacklistService blacklistService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityAdminDashboardBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        blacklistService = new BlacklistService(db);
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.toolbar.setOnMenuItemClickListener(item -> {
@@ -62,16 +76,19 @@ public class AdminDashboardActivity extends AppCompatActivity {
         setupSummaryStats();
         ensureParkingDocument();
         fetchPendingRequests();
+        setupBlacklistButton();
 
         binding.btnViewAudit.setOnClickListener(v ->
                 startActivity(new Intent(this, AdminAuditActivity.class)));
+
+        blacklistService.removeExpiredEntries();
     }
 
     private void setupRecyclerView() {
         adapter = new VisitorRequestAdapter(
                 new ArrayList<>(),
-                request -> handleApprove(request),
-                request -> handleReject(request)
+                this::handleApprove,
+                this::handleReject
         );
         binding.rvRequests.setLayoutManager(new LinearLayoutManager(this));
         binding.rvRequests.setAdapter(adapter);
@@ -90,7 +107,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     if (snapshot != null && snapshot.exists()) {
                         long occupancy = snapshot.getLong("currentOccupancy") != null
                                 ? snapshot.getLong("currentOccupancy") : 0;
-                        long capacity = snapshot.getLong("maxCapacity") != null
+                        long capacity  = snapshot.getLong("maxCapacity") != null
                                 ? snapshot.getLong("maxCapacity") : 200;
                         binding.tvParkingStatus.setText(occupancy + "/" + capacity);
                     }
@@ -102,16 +119,14 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 .whereIn("status", Arrays.asList(RequestStatus.PENDING, RequestStatus.PENDING_ADHOC))
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null) {
-                        Log.w("AdminDashboard", "Listen failed.", e);
+                        Log.w(TAG, "Listen failed.", e);
                         return;
                     }
-
                     List<VisitorRequest> pendingList = new ArrayList<>();
                     if (snapshots != null) {
                         for (DocumentSnapshot doc : snapshots.getDocuments()) {
                             VisitorRequest request = doc.toObject(VisitorRequest.class);
                             if (request != null) {
-                                // Explicitly set the requestId from the document ID
                                 pendingList.add(request.withRequestId(doc.getId()));
                             }
                         }
@@ -131,23 +146,18 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private void updateRequestStatus(VisitorRequest request, String newStatus) {
         String requestId = request.getRequestId();
         if (requestId.isEmpty()) {
-            Toast.makeText(this, "Error: Request ID is missing from document",
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error: Request ID is missing", Toast.LENGTH_SHORT).show();
             return;
         }
-
         db.collection("visitor_requests").document(requestId)
                 .update("status", newStatus)
                 .addOnSuccessListener(unused -> {
                     logAdminAction(request, newStatus.toUpperCase());
-                    String display = newStatus.isEmpty() ? newStatus
-                            : Character.toUpperCase(newStatus.charAt(0)) + newStatus.substring(1);
-                    Toast.makeText(this, "Request " + display, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Request " + newStatus, Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(error -> {
-                    Log.e("AdminDashboard", "Failed to update ID: " + requestId, error);
-                    Toast.makeText(this, "Firebase Error: " + error.getMessage(),
-                            Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "Failed to update ID: " + requestId, error);
+                    Toast.makeText(this, "Error: " + error.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
@@ -155,29 +165,142 @@ public class AdminDashboardActivity extends AppCompatActivity {
         String uid = FirebaseAuth.getInstance().getCurrentUser() != null
                 ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
         AuditLog log = new AuditLog(
-                "",
-                request.getGuestName(),
-                request.getGuestCNIC(),
-                request.getHostId(),
-                "ADMIN_" + action,
-                "Action taken by Security Admin",
-                uid,
-                Timestamp.now()
+                "", request.getGuestName(), request.getGuestCNIC(),
+                request.getHostId(), "ADMIN_" + action,
+                "Action taken by Security Admin", uid, Timestamp.now()
         );
-        db.collection("access_logs").add(log)
-                .addOnFailureListener(e ->
-                        Log.e("AdminDashboard", "Failed to write audit log", e));
+        db.collection("access_logs").add(log);
+    }
+
+    private void setupBlacklistButton() {
+        View btnManage = binding.getRoot().findViewById(R.id.btnManageBlacklist);
+        if (btnManage != null) {
+            btnManage.setOnClickListener(v -> showBlacklistMenuDialog());
+        }
+    }
+
+    private void showBlacklistMenuDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Blacklist Management")
+                .setItems(new String[]{"Add Entity to Blacklist", "View / Remove Active Entries"},
+                        (dialog, which) -> {
+                            if (which == 0) showAddBlacklistDialog();
+                            else             showViewBlacklistDialog();
+                        })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showAddBlacklistDialog() {
+        int dp8 = (int) (8 * getResources().getDisplayMetrics().density);
+
+        EditText etEntityId = new EditText(this); etEntityId.setHint("CNIC or Vehicle Plate");
+        EditText etEntityName = new EditText(this); etEntityName.setHint("Full Name / Description");
+        EditText etReason = new EditText(this); etReason.setHint("Reason for blacklisting");
+
+        RadioGroup rgType = new RadioGroup(this);
+        rgType.setOrientation(RadioGroup.HORIZONTAL);
+        RadioButton rbPerson = new RadioButton(this); rbPerson.setText("Person");
+        RadioButton rbVehicle = new RadioButton(this); rbVehicle.setText("Vehicle");
+        rgType.addView(rbPerson); rgType.addView(rbVehicle); rbPerson.setChecked(true);
+
+        RadioGroup rgBan = new RadioGroup(this);
+        rgBan.setOrientation(RadioGroup.HORIZONTAL);
+        RadioButton rbPerm = new RadioButton(this); rbPerm.setText("Permanent");
+        RadioButton rbTemp = new RadioButton(this); rbTemp.setText("Temporary (7 days)");
+        rgBan.addView(rbPerm); rgBan.addView(rbTemp); rbPerm.setChecked(true);
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp8 * 2, dp8, dp8 * 2, dp8);
+        layout.addView(etEntityId); layout.addView(etEntityName); layout.addView(etReason);
+        layout.addView(new TextView(this){{setText("Type:");}}); layout.addView(rgType);
+        layout.addView(new TextView(this){{setText("Ban:");}}); layout.addView(rgBan);
+
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.addView(layout);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Add to Blacklist")
+                .setView(scrollView)
+                .setPositiveButton("Add", null) // Set to null to override later
+                .setNegativeButton("Cancel", null)
+                .create();
+
+        dialog.show();
+
+        // Override the button click to prevent dialog from closing on validation failure
+        Button addButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        addButton.setOnClickListener(v -> {
+            String entityId = etEntityId.getText().toString().trim();
+            String entityName = etEntityName.getText().toString().trim();
+            String reason = etReason.getText().toString().trim();
+
+            if (entityId.isEmpty() || entityName.isEmpty() || reason.isEmpty()) {
+                Toast.makeText(this, "All fields are required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String entityType = rbVehicle.isChecked() ? BlacklistEntry.TYPE_VEHICLE : BlacklistEntry.TYPE_PERSON;
+            String banType = rbTemp.isChecked() ? BlacklistEntry.BAN_TEMPORARY : BlacklistEntry.BAN_PERMANENT;
+            Timestamp expiry = rbTemp.isChecked() ? sevenDaysFromNow() : null;
+            String adminId = FirebaseAuth.getInstance().getCurrentUser() != null ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
+
+            blacklistService.addToBlacklist(entityId, entityType, entityName, reason, banType, expiry, adminId,
+                    new BlacklistService.BlacklistWriteCallback() {
+                        @Override
+                        public void onSuccess() {
+                            Toast.makeText(AdminDashboardActivity.this, entityName + " added.", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        }
+
+                        @Override
+                        public void onError(Exception e) {
+                            Toast.makeText(AdminDashboardActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+        });
+    }
+
+    private void showViewBlacklistDialog() {
+        db.collection("blacklist").whereEqualTo("isActive", true)
+                .orderBy("addedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener(snapshots -> {
+                    if (snapshots == null || snapshots.isEmpty()) {
+                        new AlertDialog.Builder(this).setTitle("Blacklist").setMessage("No active entries.").setPositiveButton("OK", null).show();
+                        return;
+                    }
+                    List<BlacklistEntry> entries = snapshots.toObjects(BlacklistEntry.class);
+                    String[] labels = new String[entries.size()];
+                    for (int i = 0; i < entries.size(); i++) {
+                        BlacklistEntry e = entries.get(i);
+                        labels[i] = e.getEntityName() + " [" + e.getEntityId() + "]\n" + e.getReason();
+                    }
+                    new AlertDialog.Builder(this).setTitle("Tap to remove").setItems(labels, (d, idx) -> confirmRemoveBlacklistEntry(entries.get(idx))).show();
+                });
+    }
+
+    private void confirmRemoveBlacklistEntry(BlacklistEntry entry) {
+        new AlertDialog.Builder(this).setTitle("Remove?").setMessage("Remove " + entry.getEntityName() + "?")
+                .setPositiveButton("Remove", (d, w) -> blacklistService.removeFromBlacklist(entry.getEntryId(), new BlacklistService.BlacklistWriteCallback() {
+                    @Override public void onSuccess() { Toast.makeText(AdminDashboardActivity.this, "Removed.", Toast.LENGTH_SHORT).show(); }
+                    @Override public void onError(Exception e) { Toast.makeText(AdminDashboardActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show(); }
+                })).setNegativeButton("Cancel", null).show();
+    }
+
+    private Timestamp sevenDaysFromNow() {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_YEAR, 7);
+        return new Timestamp(cal.getTime());
     }
 
     private void ensureParkingDocument() {
-        com.google.firebase.firestore.DocumentReference docRef =
-                db.collection("system_metadata").document("parking_status");
-        docRef.get().addOnSuccessListener(snapshot -> {
+        db.collection("system_metadata").document("parking_status").get().addOnSuccessListener(snapshot -> {
             if (!snapshot.exists()) {
                 Map<String, Object> data = new HashMap<>();
-                data.put("currentOccupancy", 0L);
-                data.put("maxCapacity", 200L);
-                docRef.set(data);
+                data.put("currentOccupancy", 0L); data.put("maxCapacity", 200L);
+                db.collection("system_metadata").document("parking_status").set(data);
             }
         });
     }
