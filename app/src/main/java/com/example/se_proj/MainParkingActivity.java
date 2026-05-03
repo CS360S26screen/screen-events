@@ -65,21 +65,19 @@ public class MainParkingActivity extends AppCompatActivity {
         binding.drawerNavigation.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.drawer_in_gate) {
-                startActivity(new Intent(this, GuardDashboardActivity.class));
-                finish();
+                startGuardPortalActivity(new Intent(this, GuardDashboardActivity.class), true);
                 return true;
             } else if (id == R.id.drawer_out_gate) {
                 Intent intent = new Intent(this, GuardDashboardActivity.class);
                 intent.putExtra(GuardDashboardActivity.EXTRA_GATE_MODE,
                         GuardDashboardActivity.MODE_OUT_GATE);
-                startActivity(intent);
-                finish();
+                startGuardPortalActivity(intent, true);
                 return true;
             } else if (id == R.id.drawer_main_parking) {
                 binding.drawerLayout.closeDrawer(GravityCompat.START);
                 return true;
             } else if (id == R.id.drawer_wing_scanner) {
-                startActivity(new Intent(this, WingScannerActivity.class));
+                startGuardPortalActivity(new Intent(this, WingScannerActivity.class), false);
                 binding.drawerLayout.closeDrawer(GravityCompat.START);
                 return true;
             }
@@ -92,14 +90,13 @@ public class MainParkingActivity extends AppCompatActivity {
         binding.bottomNavigation.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
-                startActivity(new Intent(this, GuardDashboardActivity.class));
-                finish();
+                startGuardPortalActivity(new Intent(this, GuardDashboardActivity.class), true);
                 return true;
             } else if (id == R.id.nav_logs) {
-                startActivity(new Intent(this, AdminAuditActivity.class));
+                startGuardPortalActivity(new Intent(this, AdminAuditActivity.class), false);
                 return true;
             } else if (id == R.id.nav_adhoc) {
-                startActivity(new Intent(this, WalkInRegistrationActivity.class));
+                startGuardPortalActivity(new Intent(this, WalkInRegistrationActivity.class), false);
                 return true;
             } else if (id == R.id.nav_settings) {
                 Toast.makeText(this, "Settings not available yet", Toast.LENGTH_SHORT).show();
@@ -107,6 +104,15 @@ public class MainParkingActivity extends AppCompatActivity {
             }
             return false;
         });
+    }
+
+    private void startGuardPortalActivity(Intent intent, boolean finishCurrent) {
+        startActivity(intent);
+        overridePendingTransition(0, 0);
+        if (finishCurrent) {
+            finish();
+            overridePendingTransition(0, 0);
+        }
     }
 
     // -------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -66,14 +67,15 @@ public class AdminAuditActivity extends AppCompatActivity {
         binding = ActivityAdminAuditBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        binding.toolbar.setNavigationOnClickListener(v -> finish());
+        binding.toolbar.setNavigationOnClickListener(v -> finishWithoutAnimation());
         binding.toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_logout) {
                 FirebaseAuth.getInstance().signOut();
                 Intent intent = new Intent(this, LoginActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
-                finish();
+                overridePendingTransition(0, 0);
+                finishWithoutAnimation();
                 return true;
             }
             return false;
@@ -85,7 +87,41 @@ public class AdminAuditActivity extends AppCompatActivity {
         setupRecyclerView();
         setupTabs();
         setupSearch();
+        setupBottomNavigation();
         fetchLogs();
+    }
+
+    private void finishWithoutAnimation() {
+        finish();
+        overridePendingTransition(0, 0);
+    }
+
+    private void setupBottomNavigation() {
+        binding.bottomNavigation.setSelectedItemId(R.id.nav_logs);
+        binding.bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_logs) {
+                return true;
+            } else if (id == R.id.nav_home) {
+                startGuardPortalActivity(new Intent(this, GuardDashboardActivity.class), true);
+                return true;
+            } else if (id == R.id.nav_adhoc) {
+                startGuardPortalActivity(new Intent(this, WalkInRegistrationActivity.class), true);
+                return true;
+            } else if (id == R.id.nav_settings) {
+                Toast.makeText(this, "Settings coming soon", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void startGuardPortalActivity(Intent intent, boolean finishCurrent) {
+        startActivity(intent);
+        overridePendingTransition(0, 0);
+        if (finishCurrent) {
+            finishWithoutAnimation();
+        }
     }
 
     @Override

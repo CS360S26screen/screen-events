@@ -42,20 +42,50 @@ public class WalkInRegistrationActivity extends AppCompatActivity {
         binding = ActivityWalkInRegistrationBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        binding.toolbar.setNavigationOnClickListener(v -> finish());
+        binding.toolbar.setNavigationOnClickListener(v -> finishWithoutAnimation());
         binding.toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_logout) {
                 FirebaseAuth.getInstance().signOut();
                 Intent intent = new Intent(this, LoginActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
-                finish();
+                overridePendingTransition(0, 0);
+                finishWithoutAnimation();
                 return true;
             }
             return false;
         });
 
         binding.btnSubmitWalkIn.setOnClickListener(v -> submitWalkInRequest());
+        setupBottomNavigation();
+    }
+
+    private void setupBottomNavigation() {
+        binding.bottomNavigation.setSelectedItemId(R.id.nav_adhoc);
+        binding.bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_adhoc) {
+                return true;
+            } else if (id == R.id.nav_home) {
+                startGuardPortalActivity(new Intent(this, GuardDashboardActivity.class), true);
+                return true;
+            } else if (id == R.id.nav_logs) {
+                startGuardPortalActivity(new Intent(this, AdminAuditActivity.class), true);
+                return true;
+            } else if (id == R.id.nav_settings) {
+                Toast.makeText(this, "Settings coming soon", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void startGuardPortalActivity(Intent intent, boolean finishCurrent) {
+        startActivity(intent);
+        overridePendingTransition(0, 0);
+        if (finishCurrent) {
+            finishWithoutAnimation();
+        }
     }
 
     private void submitWalkInRequest() {
@@ -134,5 +164,10 @@ public class WalkInRegistrationActivity extends AppCompatActivity {
         if (listenerRegistration != null) {
             listenerRegistration.remove();
         }
+    }
+
+    private void finishWithoutAnimation() {
+        finish();
+        overridePendingTransition(0, 0);
     }
 }

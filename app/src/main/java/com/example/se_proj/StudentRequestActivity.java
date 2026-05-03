@@ -51,6 +51,8 @@ import java.util.Locale;
  */
 public class StudentRequestActivity extends AppCompatActivity {
 
+    public static final String EXTRA_SELECTED_TAB = "selected_tab";
+
     private interface OnTimeSelectedListener {
         void onTimeSelected(String time);
     }
@@ -110,6 +112,7 @@ public class StudentRequestActivity extends AppCompatActivity {
         setupMyGuestsViews();
         setupMyCarsViews();
         setupBottomNavigation();
+        setupMyCarsBottomNavigation();
         loadUserProfile();
 
         binding.etVisitDate.setOnClickListener(v -> showDatePicker());
@@ -125,7 +128,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                 }));
 
         binding.btnSubmit.setOnClickListener(v -> checkLimitAndSubmit());
-        binding.btnRegisterCar.setOnClickListener(v -> submitCarRequest());
+        binding.myCarsLayout.btnRegisterCar.setOnClickListener(v -> submitCarRequest());
     }
 
     @Override
@@ -147,7 +150,6 @@ public class StudentRequestActivity extends AppCompatActivity {
     // -------------------------------------------------------------------------
 
     private void setupBottomNavigation() {
-        binding.bottomNavigation.setSelectedItemId(R.id.nav_new_pass);
         binding.bottomNavigation.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_new_pass) {
@@ -161,6 +163,28 @@ public class StudentRequestActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.nav_wing_access) {
                 startActivity(new Intent(this, WingAccessRequestActivity.class));
+                overridePendingTransition(0, 0);
+                return true;
+            }
+            return false;
+        });
+
+        int selectedTab = getIntent().getIntExtra(EXTRA_SELECTED_TAB, R.id.nav_new_pass);
+        binding.bottomNavigation.setSelectedItemId(selectedTab);
+    }
+
+    private void setupMyCarsBottomNavigation() {
+        binding.myCarsLayout.bottomNavigation.setSelectedItemId(R.id.nav_my_cars);
+        binding.myCarsLayout.bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_my_cars) {
+                return true;
+            } else if (id == R.id.nav_new_pass || id == R.id.nav_my_guests) {
+                binding.bottomNavigation.setSelectedItemId(id);
+                return true;
+            } else if (id == R.id.nav_wing_access) {
+                startActivity(new Intent(this, WingAccessRequestActivity.class));
+                overridePendingTransition(0, 0);
                 return true;
             }
             return false;
@@ -172,45 +196,43 @@ public class StudentRequestActivity extends AppCompatActivity {
     // -------------------------------------------------------------------------
 
     private void showNewPassForm() {
+        binding.myCarsLayout.getRoot().setVisibility(View.GONE);
+        binding.appBarLayout.setVisibility(View.VISIBLE);
+        binding.studentContentScroll.setVisibility(View.VISIBLE);
+        binding.bottomNavigation.setVisibility(View.VISIBLE);
         binding.tvHeader.setText("Register New Guest");
         binding.tilGuestName.setVisibility(View.VISIBLE);
         binding.tilCnic.setVisibility(View.VISIBLE);
         binding.tilVisitDate.setVisibility(View.VISIBLE);
         binding.llTimeSlots.setVisibility(View.VISIBLE);
         binding.btnSubmit.setVisibility(View.VISIBLE);
-        binding.tilLicensePlate.setVisibility(View.GONE);
-        binding.tilCarModel.setVisibility(View.GONE);
-        binding.btnRegisterCar.setVisibility(View.GONE);
         setMyGuestsVisible(false);
         setMyCarsVisible(false);
     }
 
     private void showMyGuestsLog() {
+        binding.myCarsLayout.getRoot().setVisibility(View.GONE);
+        binding.appBarLayout.setVisibility(View.VISIBLE);
+        binding.studentContentScroll.setVisibility(View.VISIBLE);
+        binding.bottomNavigation.setVisibility(View.VISIBLE);
         binding.tvHeader.setText("My Guests");
         binding.tilGuestName.setVisibility(View.GONE);
         binding.tilCnic.setVisibility(View.GONE);
         binding.tilVisitDate.setVisibility(View.GONE);
         binding.llTimeSlots.setVisibility(View.GONE);
         binding.btnSubmit.setVisibility(View.GONE);
-        binding.tilLicensePlate.setVisibility(View.GONE);
-        binding.tilCarModel.setVisibility(View.GONE);
-        binding.btnRegisterCar.setVisibility(View.GONE);
         setMyCarsVisible(false);
         setMyGuestsVisible(true);
         fetchMyGuestsLog();
     }
 
     private void showMyCars() {
-        binding.tvHeader.setText("My Cars");
-        binding.tilGuestName.setVisibility(View.GONE);
-        binding.tilCnic.setVisibility(View.GONE);
-        binding.tilVisitDate.setVisibility(View.GONE);
-        binding.llTimeSlots.setVisibility(View.GONE);
-        binding.btnSubmit.setVisibility(View.GONE);
+        binding.appBarLayout.setVisibility(View.GONE);
+        binding.studentContentScroll.setVisibility(View.GONE);
+        binding.bottomNavigation.setVisibility(View.GONE);
+        binding.myCarsLayout.getRoot().setVisibility(View.VISIBLE);
+        binding.myCarsLayout.bottomNavigation.setSelectedItemId(R.id.nav_my_cars);
         setMyGuestsVisible(false);
-        binding.tilLicensePlate.setVisibility(View.VISIBLE);
-        binding.tilCarModel.setVisibility(View.VISIBLE);
-        binding.btnRegisterCar.setVisibility(View.VISIBLE);
         setMyCarsVisible(true);
         loadApprovedCars();
         loadPendingCarRequests();
@@ -318,67 +340,28 @@ public class StudentRequestActivity extends AppCompatActivity {
     // -------------------------------------------------------------------------
 
     private void setupMyCarsViews() {
-        View child1 = binding.getRoot().getChildAt(1);
-        if (!(child1 instanceof androidx.core.widget.NestedScrollView)) return;
-        View scrollChild = ((androidx.core.widget.NestedScrollView) child1).getChildAt(0);
-        if (!(scrollChild instanceof ConstraintLayout)) return;
-        ConstraintLayout contentRoot = (ConstraintLayout) scrollChild;
-
         // Approved cars (read-only, no delete button)
         carsAdapter = new VehicleListAdapter(new ArrayList<>(), false, vehicle -> {});
 
-        carsRecycler = new RecyclerView(this);
-        carsRecycler.setId(View.generateViewId());
+        carsRecycler = binding.myCarsLayout.rvApprovedCars;
         carsRecycler.setLayoutManager(new LinearLayoutManager(this));
         carsRecycler.setAdapter(carsAdapter);
         carsRecycler.setVisibility(View.GONE);
 
-        carsEmptyView = new TextView(this);
-        carsEmptyView.setId(View.generateViewId());
-        carsEmptyView.setText("No approved cars yet.");
-        carsEmptyView.setTextSize(14f);
+        carsEmptyView = binding.myCarsLayout.tvMyCarsEmpty;
         carsEmptyView.setVisibility(View.GONE);
 
         // Pending car requests
         pendingRequestsAdapter = new PendingCarRequestAdapter(
                 new ArrayList<>(), this::cancelCarRequest);
 
-        pendingRequestsRecycler = new RecyclerView(this);
-        pendingRequestsRecycler.setId(View.generateViewId());
+        pendingRequestsRecycler = binding.myCarsLayout.rvPendingCarRequests;
         pendingRequestsRecycler.setLayoutManager(new LinearLayoutManager(this));
         pendingRequestsRecycler.setAdapter(pendingRequestsAdapter);
         pendingRequestsRecycler.setVisibility(View.GONE);
 
-        pendingRequestsEmptyView = new TextView(this);
-        pendingRequestsEmptyView.setId(View.generateViewId());
-        pendingRequestsEmptyView.setText("No pending requests.");
-        pendingRequestsEmptyView.setTextSize(14f);
+        pendingRequestsEmptyView = binding.myCarsLayout.tvPendingCarRequestsEmpty;
         pendingRequestsEmptyView.setVisibility(View.GONE);
-
-        contentRoot.addView(pendingRequestsRecycler);
-        contentRoot.addView(pendingRequestsEmptyView);
-        contentRoot.addView(carsRecycler);
-        contentRoot.addView(carsEmptyView);
-
-        ConstraintLayout.LayoutParams pendingParams = new ConstraintLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        pendingParams.topToBottom = R.id.btnRegisterCar;
-        pendingParams.topMargin = 16;
-        pendingRequestsRecycler.setLayoutParams(pendingParams);
-
-        ConstraintLayout.LayoutParams carsParams = new ConstraintLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        carsParams.topToBottom = pendingRequestsRecycler.getId();
-        carsParams.topMargin = 8;
-        carsRecycler.setLayoutParams(carsParams);
-
-        ConstraintLayout.LayoutParams emptyParams = new ConstraintLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        emptyParams.topToBottom = R.id.btnRegisterCar;
-        emptyParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
-        emptyParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
-        emptyParams.topMargin = 48;
-        carsEmptyView.setLayoutParams(emptyParams);
     }
 
     // -------------------------------------------------------------------------
@@ -407,6 +390,8 @@ public class StudentRequestActivity extends AppCompatActivity {
                         }
                     }
                     carsAdapter.updateData(list);
+                    binding.myCarsLayout.tvRegisteredVehiclesCount.setText(
+                            String.format(Locale.getDefault(), "%d total", list.size()));
                     if (carsEmptyView != null) {
                         carsEmptyView.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
                     }
@@ -444,10 +429,10 @@ public class StudentRequestActivity extends AppCompatActivity {
     // -------------------------------------------------------------------------
 
     private void submitCarRequest() {
-        String plate = binding.etLicensePlate.getText() != null
-                ? binding.etLicensePlate.getText().toString().trim().toUpperCase() : "";
-        String model = binding.etCarModel.getText() != null
-                ? binding.etCarModel.getText().toString().trim() : "";
+        String plate = binding.myCarsLayout.etLicensePlate.getText() != null
+                ? binding.myCarsLayout.etLicensePlate.getText().toString().trim().toUpperCase() : "";
+        String model = binding.myCarsLayout.etCarModel.getText() != null
+                ? binding.myCarsLayout.etCarModel.getText().toString().trim() : "";
 
         VehicleRegistrationUtils.ValidationResult validation =
                 VehicleRegistrationUtils.validateCarRequest(plate, model);
@@ -460,7 +445,7 @@ public class StudentRequestActivity extends AppCompatActivity {
             return;
         }
 
-        binding.btnRegisterCar.setEnabled(false);
+        binding.myCarsLayout.btnRegisterCar.setEnabled(false);
 
         // Count pending + approved together against the 2-vehicle cap
         db.collection("car_registration_requests")
@@ -477,7 +462,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                                     Toast.makeText(this,
                                             "Maximum 2 vehicles allowed per student",
                                             Toast.LENGTH_SHORT).show();
-                                    binding.btnRegisterCar.setEnabled(true);
+                                    binding.myCarsLayout.btnRegisterCar.setEnabled(true);
                                     return;
                                 }
                                 checkPlateAndSubmit(plate, model);
@@ -485,12 +470,12 @@ public class StudentRequestActivity extends AppCompatActivity {
                             .addOnFailureListener(e -> {
                                 Toast.makeText(this, "Error: " + e.getMessage(),
                                         Toast.LENGTH_SHORT).show();
-                                binding.btnRegisterCar.setEnabled(true);
+                                binding.myCarsLayout.btnRegisterCar.setEnabled(true);
                             });
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    binding.btnRegisterCar.setEnabled(true);
+                    binding.myCarsLayout.btnRegisterCar.setEnabled(true);
                 });
     }
 
@@ -515,7 +500,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                         Toast.makeText(this,
                                 "This plate already has a pending or approved request",
                                 Toast.LENGTH_SHORT).show();
-                        binding.btnRegisterCar.setEnabled(true);
+                        binding.myCarsLayout.btnRegisterCar.setEnabled(true);
                         return;
                     }
                     db.collection("cars_registered")
@@ -526,7 +511,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                                     Toast.makeText(this,
                                             "License plate already registered in the system",
                                             Toast.LENGTH_SHORT).show();
-                                    binding.btnRegisterCar.setEnabled(true);
+                                    binding.myCarsLayout.btnRegisterCar.setEnabled(true);
                                     return;
                                 }
                                 saveCarRequest(plate, model);
@@ -534,12 +519,12 @@ public class StudentRequestActivity extends AppCompatActivity {
                             .addOnFailureListener(e -> {
                                 Toast.makeText(this, "Error: " + e.getMessage(),
                                         Toast.LENGTH_SHORT).show();
-                                binding.btnRegisterCar.setEnabled(true);
+                                binding.myCarsLayout.btnRegisterCar.setEnabled(true);
                             });
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    binding.btnRegisterCar.setEnabled(true);
+                    binding.myCarsLayout.btnRegisterCar.setEnabled(true);
                 });
     }
 
@@ -554,11 +539,11 @@ public class StudentRequestActivity extends AppCompatActivity {
                     Toast.makeText(this, "Car request submitted — pending admin approval",
                             Toast.LENGTH_SHORT).show();
                     clearCarForm();
-                    binding.btnRegisterCar.setEnabled(true);
+                    binding.myCarsLayout.btnRegisterCar.setEnabled(true);
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    binding.btnRegisterCar.setEnabled(true);
+                    binding.myCarsLayout.btnRegisterCar.setEnabled(true);
                 });
     }
 
@@ -581,8 +566,8 @@ public class StudentRequestActivity extends AppCompatActivity {
     }
 
     private void clearCarForm() {
-        if (binding.etLicensePlate.getText() != null) binding.etLicensePlate.getText().clear();
-        if (binding.etCarModel.getText() != null) binding.etCarModel.getText().clear();
+        if (binding.myCarsLayout.etLicensePlate.getText() != null) binding.myCarsLayout.etLicensePlate.getText().clear();
+        if (binding.myCarsLayout.etCarModel.getText() != null) binding.myCarsLayout.etCarModel.getText().clear();
     }
 
     // -------------------------------------------------------------------------

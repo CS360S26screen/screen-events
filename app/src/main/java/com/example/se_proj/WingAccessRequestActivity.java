@@ -1,5 +1,6 @@
 package com.example.se_proj;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -45,7 +46,27 @@ public class WingAccessRequestActivity extends AppCompatActivity {
         binding = ActivityWingAccessRequestBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        binding.toolbar.setNavigationOnClickListener(v -> finish());
+        binding.bottomNavigation.setSelectedItemId(R.id.nav_wing_access);
+        binding.bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_wing_access) {
+                return true;
+            }
+
+            Intent intent = new Intent(this, StudentRequestActivity.class);
+            if (id == R.id.nav_my_guests) {
+                intent.putExtra(StudentRequestActivity.EXTRA_SELECTED_TAB, R.id.nav_my_guests);
+            } else if (id == R.id.nav_my_cars) {
+                intent.putExtra(StudentRequestActivity.EXTRA_SELECTED_TAB, R.id.nav_my_cars);
+            } else {
+                intent.putExtra(StudentRequestActivity.EXTRA_SELECTED_TAB, R.id.nav_new_pass);
+            }
+            startActivity(intent);
+            overridePendingTransition(0, 0);
+            finish();
+            overridePendingTransition(0, 0);
+            return true;
+        });
 
         ArrayAdapter<String> wingAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line, WingConstants.ALL_WINGS);
@@ -61,6 +82,10 @@ public class WingAccessRequestActivity extends AppCompatActivity {
                 binding.llOnBehalfFields.setVisibility(View.GONE);
                 binding.llSelfFields.setVisibility(View.VISIBLE);
             } else if (checkedId == R.id.btnModeOnBehalf) {
+                if (profileLoaded && !"faculty".equals(userRole)) {
+                    binding.toggleRequestMode.check(R.id.btnModeMyself);
+                    return;
+                }
                 onBehalfMode = true;
                 binding.llSelfFields.setVisibility(View.GONE);
                 binding.llOnBehalfFields.setVisibility(View.VISIBLE);
@@ -100,7 +125,7 @@ public class WingAccessRequestActivity extends AppCompatActivity {
                         String n = doc.getString("name");
                         userName = n != null ? n : "";
                         binding.tvSelfRollDisplay.setText(userRollNo);
-                        binding.btnModeOnBehalf.setVisibility(View.GONE);
+                        binding.btnModeOnBehalf.setVisibility(View.VISIBLE);
                     }
 
                     profileLoaded = true;

@@ -5,383 +5,670 @@
     android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
+    android:background="#FBFAFF"
     tools:context=".GuardDashboardActivity">
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/white"
-        app:elevation="0dp">
-
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_menu"
-            app:title="In-Gate - Live Dashboard"
-            app:titleCentered="true" />
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-        <LinearLayout
+        <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingTop="20dp"
-            android:paddingEnd="20dp"
-            android:paddingBottom="120dp">
+            android:background="@color/campus_blue_primary"
+            app:elevation="0dp">
 
-            <!-- Live campus summary card -->
-            <com.google.android.material.card.MaterialCardView
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                app:cardBackgroundColor="@color/primary_container"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/border_color"
-                app:strokeWidth="1dp">
+                android:layout_height="86dp"
+                app:title="Campus Hub"
+                app:titleCentered="true"
+                app:titleTextColor="@color/white">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <FrameLayout
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp">
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="16dp">
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvGuardGuestCount"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textColor="@color/campus_blue_primary"
-                            android:textSize="28sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Guests on Campus"
-                            android:textColor="@color/text_color_secondary"
-                            android:textSize="12sp" />
-                    </LinearLayout>
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_notification"
+                        app:tint="@color/white" />
 
                     <View
-                        android:layout_width="1dp"
-                        android:layout_height="match_parent"
-                        android:layout_marginVertical="4dp"
-                        android:background="@color/border_color" />
+                        android:layout_width="9dp"
+                        android:layout_height="9dp"
+                        android:layout_gravity="top|end"
+                        android:background="@drawable/shape_notification_dot" />
+                </FrameLayout>
+            </com.google.android.material.appbar.MaterialToolbar>
+        </com.google.android.material.appbar.AppBarLayout>
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvGuardParkingCount"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0/200"
-                            android:textColor="@color/primary_purple"
-                            android:textSize="22sp"
-                            android:textStyle="bold" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnViewParking"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="View Parking →"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <TextView
-                style="@style/TextAppearance.App.TitleLarge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Search Requests" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilSearchCnic"
-                style="@style/Widget.App.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="Guest CNIC"
-                app:startIconDrawable="@android:drawable/ic_menu_myplaces"
-                app:startIconTint="@color/primary_purple">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etSearchCnic"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="number" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSearchCnic"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Verify by CNIC" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilSearchRoll"
-                style="@style/Widget.App.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:hint="Host ID (Current Guests)"
-                app:startIconDrawable="@android:drawable/ic_menu_search"
-                app:startIconTint="@color/primary_purple">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etSearchRoll"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="text" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSearchRoll"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Find by Host" />
-
-            <TextView
-                style="@style/TextAppearance.App.TitleLarge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Delivery Tracking" />
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginBottom="88dp"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:paddingStart="22dp"
+                android:paddingTop="24dp"
+                android:paddingEnd="22dp"
+                android:paddingBottom="36dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnDeliveryEntry"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="176dp"
+                    android:background="@drawable/bg_guard_summary_gradient"
+                    android:elevation="8dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="26dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:gravity="center_vertical"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ON CAMPUS"
+                                android:textColor="#E8DDFF"
+                                android:textSize="15sp" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/tvGuardGuestCount"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0"
+                                    android:textColor="@color/white"
+                                    android:textSize="44sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:text="guest"
+                                    android:textColor="#E8DDFF"
+                                    android:textSize="16sp" />
+                            </LinearLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnViewParking"
+                                android:layout_width="wrap_content"
+                                android:layout_height="44dp"
+                                android:layout_marginTop="8dp"
+                                android:backgroundTint="#33FFFFFF"
+                                android:minWidth="0dp"
+                                android:paddingHorizontal="18dp"
+                                android:text="View Parking  →"
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                app:cornerRadius="22dp" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="1dp"
+                            android:layout_height="82dp"
+                            android:layout_marginHorizontal="24dp"
+                            android:background="#40FFFFFF" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:gravity="center_vertical|end"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="PARKING"
+                                android:textColor="#E8DDFF"
+                                android:textSize="15sp" />
+
+                            <TextView
+                                android:id="@+id/tvGuardParkingCount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="0/200"
+                                android:textColor="@color/white"
+                                android:textSize="30sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/guardHomeTabContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="66dp"
+                    android:layout_marginTop="30dp"
+                    android:background="@drawable/bg_guard_tab_shell"
+                    android:elevation="2dp"
+                    android:padding="8dp">
+
+                    <View
+                        android:id="@+id/guardHomeTabHighlight"
+                        android:layout_width="0dp"
+                        android:layout_height="50dp"
+                        android:layout_gravity="start|center_vertical"
+                        android:background="@drawable/bg_guard_tab_active" />
+
+                    <LinearLayout
+                        android:id="@+id/guardHomeTabRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tabGuests"
+                        android:layout_width="0dp"
+                        android:layout_height="50dp"
+                        android:layout_weight="1"
+                        android:background="@android:color/transparent"
+                        android:drawableStart="@android:drawable/ic_menu_upload"
+                        android:drawablePadding="8dp"
+                        android:gravity="center"
+                        android:text="Guests"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        app:drawableTint="@color/white" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/tabDelivery"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="50dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@android:color/transparent"
+                        android:text="Delivery"
+                        android:textAllCaps="false"
+                        android:textColor="#3D4A5C"
+                        android:textSize="16sp"
+                        app:icon="@android:drawable/ic_dialog_map"
+                        app:iconGravity="textStart"
+                        app:iconTint="#3D4A5C" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/tabCars"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="0dp"
+                        android:layout_height="50dp"
+                        android:layout_weight="1"
+                        android:backgroundTint="@android:color/transparent"
+                        android:text="Cars"
+                        android:textAllCaps="false"
+                        android:textColor="#3D4A5C"
+                        android:textSize="16sp"
+                        app:icon="@android:drawable/ic_menu_directions"
+                        app:iconGravity="textStart"
+                        app:iconTint="#3D4A5C" />
+                    </LinearLayout>
+                </FrameLayout>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardVerifyGuest"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:text="Delivery Entry" />
+                    android:layout_marginTop="26dp"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="#ECEFF4"
+                    app:strokeWidth="1dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnDeliveryExit"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Verify Guest"
+                            android:textColor="@color/black"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilSearchCnic"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:hint="Guest CNIC"
+                            app:boxBackgroundColor="#F6F1FC"
+                            app:boxCornerRadiusBottomEnd="14dp"
+                            app:boxCornerRadiusBottomStart="14dp"
+                            app:boxCornerRadiusTopEnd="14dp"
+                            app:boxCornerRadiusTopStart="14dp"
+                            app:boxStrokeWidth="0dp"
+                            app:startIconDrawable="@android:drawable/ic_menu_myplaces"
+                            app:startIconTint="#8B75C9">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etSearchCnic"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number"
+                                android:paddingVertical="18dp"
+                                android:textSize="16sp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSearchCnic"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_marginTop="16dp"
+                            android:backgroundTint="@color/campus_blue_primary"
+                            android:text="Verify by CNIC"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="14dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardFindCurrentGuest"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:text="Delivery Exit" />
-            </LinearLayout>
+                    android:layout_marginTop="20dp"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="#ECEFF4"
+                    app:strokeWidth="1dp">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cvResult"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:visibility="gone"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/border_color"
-                app:strokeWidth="1dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Find Current Guest"
+                            android:textColor="@color/black"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilSearchRoll"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:hint="Host ID"
+                            app:boxBackgroundColor="#F6F1FC"
+                            app:boxCornerRadiusBottomEnd="14dp"
+                            app:boxCornerRadiusBottomStart="14dp"
+                            app:boxCornerRadiusTopEnd="14dp"
+                            app:boxCornerRadiusTopStart="14dp"
+                            app:boxStrokeWidth="0dp"
+                            app:startIconDrawable="@android:drawable/ic_menu_search"
+                            app:startIconTint="#8B75C9">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etSearchRoll"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text"
+                                android:paddingVertical="18dp"
+                                android:textSize="16sp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSearchRoll"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_marginTop="16dp"
+                            android:backgroundTint="#E7DDF8"
+                            android:text="Find by Host"
+                            android:textAllCaps="false"
+                            android:textColor="#2F1688"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="14dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardDeliveryTracking"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="26dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="#ECEFF4"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Delivery Tracking"
+                            android:textColor="@color/black"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDeliveryEntry"
+                                android:layout_width="0dp"
+                                android:layout_height="56dp"
+                                android:layout_marginEnd="8dp"
+                                android:layout_weight="1"
+                                android:backgroundTint="#E7DDF8"
+                                android:text="Entry"
+                                android:textAllCaps="false"
+                                android:textColor="#2F1688"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                app:cornerRadius="14dp"
+                                app:icon="@android:drawable/stat_sys_download_done"
+                                app:iconGravity="textStart"
+                                app:iconTint="#2F1688" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDeliveryExit"
+                                android:layout_width="0dp"
+                                android:layout_height="56dp"
+                                android:layout_marginStart="8dp"
+                                android:layout_weight="1"
+                                android:backgroundTint="#E7DDF8"
+                                android:text="Exit"
+                                android:textAllCaps="false"
+                                android:textColor="#2F1688"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                app:cornerRadius="14dp"
+                                app:icon="@android:drawable/stat_sys_upload_done"
+                                app:iconGravity="textStart"
+                                app:iconTint="#2F1688" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cvResult"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:visibility="gone"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border_color"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <TextView
+                            android:id="@+id/tvGuestName"
+                            style="@style/TextAppearance.App.TitleLarge"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textStyle="bold"
+                            tools:text="Guest Name" />
+
+                        <TextView
+                            android:id="@+id/tvHostInfo"
+                            style="@style/TextAppearance.App.BodyMedium"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            tools:text="Host: 27100xxx" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:textColor="@color/status_approved_text"
+                            app:chipBackgroundColor="@color/status_approved_bg"
+                            app:chipStrokeWidth="0dp"
+                            tools:text="AUTHORIZED" />
+
+                        <TextView
+                            android:id="@+id/tvStatus"
+                            style="@style/TextAppearance.App.BodyMedium"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textStyle="bold"
+                            tools:text="Authorized for Entry" />
+
+                        <TextView
+                            android:id="@+id/tvTimeWindow"
+                            style="@style/TextAppearance.App.BodyMedium"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            tools:text="09:00 - 11:00" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAction"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="20dp"
+                            tools:text="Check-In" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnOverride"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Manual Override"
+                            android:textColor="@color/status_denied_text"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView
+                    android:id="@+id/tvEmptyState"
+                    style="@style/TextAppearance.App.BodyMedium"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="32dp"
+                    android:gravity="center"
+                    android:text="No approved request found."
+                    android:visibility="gone" />
 
                 <LinearLayout
+                    android:id="@+id/carTrackingSection"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:visibility="gone">
 
-                    <TextView
-                        android:id="@+id/tvGuestName"
-                        style="@style/TextAppearance.App.TitleLarge"
+                    <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textStyle="bold"
-                        tools:text="Guest Name" />
+                        android:layout_marginTop="26dp"
+                        app:cardBackgroundColor="@color/white"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="2dp"
+                        app:strokeColor="#ECEFF4"
+                        app:strokeWidth="1dp">
 
-                    <TextView
-                        android:id="@+id/tvHostInfo"
-                        style="@style/TextAppearance.App.BodyMedium"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        tools:text="Host: 27100xxx" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="20dp">
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:textColor="@color/status_approved_text"
-                        app:chipBackgroundColor="@color/status_approved_bg"
-                        app:chipStrokeWidth="0dp"
-                        tools:text="AUTHORIZED" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Car Entry"
+                                android:textColor="@color/black"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
 
-                    <TextView
-                        android:id="@+id/tvStatus"
-                        style="@style/TextAppearance.App.BodyMedium"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:textStyle="bold"
-                        tools:text="Authorized for Entry" />
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/tilVehicleEntryPlate"
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="16dp"
+                                android:hint="License Plate"
+                                app:boxBackgroundColor="#F6F1FC"
+                                app:boxCornerRadiusBottomEnd="14dp"
+                                app:boxCornerRadiusBottomStart="14dp"
+                                app:boxCornerRadiusTopEnd="14dp"
+                                app:boxCornerRadiusTopStart="14dp"
+                                app:boxStrokeWidth="0dp"
+                                app:startIconDrawable="@android:drawable/ic_menu_directions"
+                                app:startIconTint="#8B75C9">
 
-                    <TextView
-                        android:id="@+id/tvTimeWindow"
-                        style="@style/TextAppearance.App.BodyMedium"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        tools:text="09:00 - 11:00" />
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etVehicleEntryPlate"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="textCapCharacters"
+                                    android:paddingVertical="18dp"
+                                    android:textSize="16sp" />
+                            </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnAction"
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnEnterCar"
+                                android:layout_width="match_parent"
+                                android:layout_height="56dp"
+                                android:layout_marginTop="16dp"
+                                android:backgroundTint="@color/campus_blue_primary"
+                                android:text="Find &amp; Check In"
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                app:cornerRadius="14dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
-                        tools:text="Check-In" />
+                        app:cardBackgroundColor="@color/white"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="2dp"
+                        app:strokeColor="#ECEFF4"
+                        app:strokeWidth="1dp">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnOverride"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Manual Override"
-                        android:textColor="@color/status_denied_text"
-                        android:visibility="gone" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="20dp">
 
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Car Exit"
+                                android:textColor="@color/black"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/tilCarExitPlate"
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="16dp"
+                                android:hint="License Plate"
+                                app:boxBackgroundColor="#F6F1FC"
+                                app:boxCornerRadiusBottomEnd="14dp"
+                                app:boxCornerRadiusBottomStart="14dp"
+                                app:boxCornerRadiusTopEnd="14dp"
+                                app:boxCornerRadiusTopStart="14dp"
+                                app:boxStrokeWidth="0dp"
+                                app:startIconDrawable="@android:drawable/ic_menu_directions"
+                                app:startIconTint="#8B75C9">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etCarExitPlate"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="textCapCharacters"
+                                    android:paddingVertical="18dp"
+                                    android:textSize="16sp" />
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnFindCar"
+                                android:layout_width="match_parent"
+                                android:layout_height="56dp"
+                                android:layout_marginTop="16dp"
+                                android:backgroundTint="@color/campus_blue_primary"
+                                android:text="Find &amp; Check Out"
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                app:cornerRadius="14dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
 
-            <TextView
-                android:id="@+id/tvEmptyState"
-                style="@style/TextAppearance.App.BodyMedium"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:gravity="center"
-                android:text="No approved request found."
-                android:visibility="gone" />
-
-            <!-- Car Entry section -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="28dp"
-                android:background="@color/border_color" />
-
-            <TextView
-                style="@style/TextAppearance.App.TitleLarge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="Car Entry" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilVehicleEntryPlate"
-                style="@style/Widget.App.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="License Plate"
-                app:startIconDrawable="@android:drawable/ic_menu_directions"
-                app:startIconTint="@color/primary_purple">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etVehicleEntryPlate"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textCapCharacters" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnEnterCar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Find &amp; Check In Car" />
-
-            <!-- Car Exit section -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="28dp"
-                android:background="@color/border_color" />
-
-            <TextView
-                style="@style/TextAppearance.App.TitleLarge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="Car Exit" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilCarExitPlate"
-                style="@style/Widget.App.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="License Plate"
-                app:startIconDrawable="@android:drawable/ic_menu_directions"
-                app:startIconTint="@color/primary_purple">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etCarExitPlate"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textCapCharacters" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnFindCar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="32dp"
-                android:text="Find &amp; Check Out Car" />
-
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
-
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNavigation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:background="@color/white"
-        app:itemIconTint="@color/nav_item_selector"
-        app:itemTextColor="@color/nav_item_selector"
-        app:labelVisibilityMode="labeled"
-        app:menu="@menu/guard_bottom_nav_menu" />
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNavigation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="@color/white"
+            app:itemIconTint="@color/nav_item_selector"
+            app:itemTextColor="@color/nav_item_selector"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/guard_bottom_nav_menu" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
@@ -389,9 +676,6 @@
         android:id="@+id/drawerNavigation"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_gravity="start"
-        android:background="@color/white"
-        app:itemTextColor="@color/text_color_primary"
-        app:menu="@menu/guard_nav_menu" />
+        android:layout_gravity="start" />
 
 </androidx.drawerlayout.widget.DrawerLayout>
