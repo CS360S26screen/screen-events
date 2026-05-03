@@ -35,7 +35,6 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.WriteBatch;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -45,17 +44,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Admin control panel for approving/rejecting visitor requests, monitoring live stats,
- * and managing the blacklist (US19).
  * Admin control panel for approving/rejecting visitor requests, managing car registration
  * requests, and monitoring live summary stats.
- *
- * <p>Car registration flow: student/faculty submit a {@link CarRegistrationRequest}; admin
- * approves here which creates a {@link RegisteredVehicle} document, or rejects which closes
- * the request without any vehicle record.</p>
- *
- * <p>Outstanding: status changes and audit-log writes are separate Firestore operations
- * (not atomic), so partial failure can leave state temporarily inconsistent.</p>
  */
 public class AdminDashboardActivity extends AppCompatActivity {
 
@@ -104,10 +94,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 startActivity(new Intent(this, AdminWingAccessActivity.class)));
     }
 
-    // -------------------------------------------------------------------------
-    // RecyclerView setup
-    // -------------------------------------------------------------------------
-
     private void setupVisitorRecyclerView() {
         adapter = new VisitorRequestAdapter(
                 new ArrayList<>(),
@@ -121,16 +107,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private void setupCarRequestRecyclerView() {
         carAdapter = new CarRegistrationRequestAdapter(
                 new ArrayList<>(),
-                request -> approveCarRequest(request),
-                request -> rejectCarRequest(request)
+                this::approveCarRequest,
+                this::rejectCarRequest
         );
         binding.rvCarRequests.setLayoutManager(new LinearLayoutManager(this));
         binding.rvCarRequests.setAdapter(carAdapter);
     }
-
-    // -------------------------------------------------------------------------
-    // Summary stats
-    // -------------------------------------------------------------------------
 
     private void setupSummaryStats() {
         db.collection("visitor_requests")
@@ -151,10 +133,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     }
                 });
     }
-
-    // -------------------------------------------------------------------------
-    // Visitor requests
-    // -------------------------------------------------------------------------
 
     private void fetchPendingRequests() {
         db.collection("visitor_requests")
@@ -227,7 +205,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 .setItems(new String[]{"Add Entity to Blacklist", "View / Remove Active Entries"},
                         (dialog, which) -> {
                             if (which == 0) showAddBlacklistDialog();
-                            else             showViewBlacklistDialog();
+                            else startActivity(new Intent(this, AdminBlacklistActivity.class));
                         })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -252,10 +230,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         RadioButton rbTemp = new RadioButton(this); rbTemp.setText("Temporary (7 days)");
         rgBan.addView(rbPerm); rgBan.addView(rbTemp); rbPerm.setChecked(true);
 
-        TextView tvTypeLabel = new TextView(this);
-        tvTypeLabel.setText("Type:");
-        TextView tvBanLabel = new TextView(this);
-        tvBanLabel.setText("Ban:");
+        TextView tvTypeLabel = new TextView(this); tvTypeLabel.setText("Type:");
+        TextView tvBanLabel = new TextView(this); tvBanLabel.setText("Ban:");
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -270,13 +246,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Add to Blacklist")
                 .setView(scrollView)
-                .setPositiveButton("Add", null) // Set to null to override later
+                .setPositiveButton("Add", null)
                 .setNegativeButton("Cancel", null)
                 .create();
 
         dialog.show();
 
-        // Override the button click to prevent dialog from closing on validation failure
         Button addButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
         addButton.setOnClickListener(v -> {
             String entityId = etEntityId.getText().toString().trim();
@@ -295,45 +270,15 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
             blacklistService.addToBlacklist(entityId, entityType, entityName, reason, banType, expiry, adminId,
                     new BlacklistService.BlacklistWriteCallback() {
-                        @Override
-                        public void onSuccess() {
+                        @Override public void onSuccess() {
                             Toast.makeText(AdminDashboardActivity.this, entityName + " added.", Toast.LENGTH_SHORT).show();
                             dialog.dismiss();
                         }
-
-                        @Override
-                        public void onError(Exception e) {
+                        @Override public void onError(Exception e) {
                             Toast.makeText(AdminDashboardActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
                         }
                     });
         });
-    }
-
-    private void showViewBlacklistDialog() {
-        db.collection("blacklist").whereEqualTo("isActive", true)
-                .orderBy("addedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(snapshots -> {
-                    if (snapshots == null || snapshots.isEmpty()) {
-                        new AlertDialog.Builder(this).setTitle("Blacklist").setMessage("No active entries.").setPositiveButton("OK", null).show();
-                        return;
-                    }
-                    List<BlacklistEntry> entries = snapshots.toObjects(BlacklistEntry.class);
-                    String[] labels = new String[entries.size()];
-                    for (int i = 0; i < entries.size(); i++) {
-                        BlacklistEntry e = entries.get(i);
-                        labels[i] = e.getEntityName() + " [" + e.getEntityId() + "]\n" + e.getReason();
-                    }
-                    new AlertDialog.Builder(this).setTitle("Tap to remove").setItems(labels, (d, idx) -> confirmRemoveBlacklistEntry(entries.get(idx))).show();
-                });
-    }
-
-    private void confirmRemoveBlacklistEntry(BlacklistEntry entry) {
-        new AlertDialog.Builder(this).setTitle("Remove?").setMessage("Remove " + entry.getEntityName() + "?")
-                .setPositiveButton("Remove", (d, w) -> blacklistService.removeFromBlacklist(entry.getEntryId(), new BlacklistService.BlacklistWriteCallback() {
-                    @Override public void onSuccess() { Toast.makeText(AdminDashboardActivity.this, "Removed.", Toast.LENGTH_SHORT).show(); }
-                    @Override public void onError(Exception e) { Toast.makeText(AdminDashboardActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show(); }
-                })).setNegativeButton("Cancel", null).show();
     }
 
     private Timestamp sevenDaysFromNow() {
@@ -342,31 +287,27 @@ public class AdminDashboardActivity extends AppCompatActivity {
         return new Timestamp(cal.getTime());
     }
 
-    // -------------------------------------------------------------------------
-    // Car registration requests
-    // -------------------------------------------------------------------------
-
     private void fetchPendingCarRequests() {
         db.collection("car_registration_requests")
                 .whereEqualTo("status", "pending")
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null) {
-                        Log.w("AdminDashboard", "Car requests listen failed.", e);
+                        Log.w(TAG, "Car requests listen failed.", e);
                         return;
                     }
-
                     List<CarRegistrationRequest> list = new ArrayList<>();
                     if (snapshots != null) {
                         for (DocumentSnapshot doc : snapshots.getDocuments()) {
                             CarRegistrationRequest r = doc.toObject(CarRegistrationRequest.class);
-                            if (r != null) list.add(r);
+                            if (r != null) {
+                                if (r.getRequestId().isEmpty()) r.setRequestId(doc.getId());
+                                list.add(r);
+                            }
                         }
                     }
                     carAdapter.updateData(list);
-                    binding.tvCarRequestsEmpty.setVisibility(
-                            list.isEmpty() ? View.VISIBLE : View.GONE);
-                    binding.rvCarRequests.setVisibility(
-                            list.isEmpty() ? View.GONE : View.VISIBLE);
+                    binding.tvCarRequestsEmpty.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
+                    binding.rvCarRequests.setVisibility(list.isEmpty() ? View.GONE : View.VISIBLE);
                 });
     }
 
@@ -375,26 +316,21 @@ public class AdminDashboardActivity extends AppCompatActivity {
             Toast.makeText(this, "Cannot approve: request ID missing", Toast.LENGTH_SHORT).show();
             return;
         }
-
         db.collection("cars_registered")
                 .whereEqualTo("licensePlate", request.getLicensePlate())
                 .get()
                 .addOnSuccessListener(existingCars -> {
                     if (!existingCars.isEmpty()) {
-                        Toast.makeText(this, "License plate already registered",
-                                Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "License plate already registered", Toast.LENGTH_SHORT).show();
                         return;
                     }
-
                     if ("student".equals(request.getOwnerRole())) {
                         enforceStudentCarApprovalLimit(request);
                     } else {
                         createRegisteredVehicle(request);
                     }
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Approval check failed: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> Toast.makeText(this, "Approval check failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     private void enforceStudentCarApprovalLimit(CarRegistrationRequest request) {
@@ -403,16 +339,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(approvedCars -> {
                     if (VehicleRegistrationUtils.isAtCarLimit(approvedCars.size())) {
-                        Toast.makeText(this,
-                                "Student already has 2 registered vehicles",
-                                Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Student already has 2 registered vehicles", Toast.LENGTH_SHORT).show();
                         return;
                     }
                     createRegisteredVehicle(request);
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Approval check failed: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> Toast.makeText(this, "Approval check failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     private void createRegisteredVehicle(CarRegistrationRequest request) {
@@ -421,35 +353,21 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 request.getStudentUid(), request.getOwnerRole(), request.getLicensePlate(),
                 request.getCarModel(), false, null, null
         );
-
         DocumentReference vehicleRef = db.collection("cars_registered").document();
         vehicle.setVehicleId(vehicleRef.getId());
-
-        String uid = FirebaseAuth.getInstance().getCurrentUser() != null
-                ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
-        AuditLog log = new AuditLog(
-                "", vehicle.getStudentName(), "", vehicle.getStudentRollNo(),
-                "CAR_REGISTERED",
-                vehicle.getLicensePlate() + " — " + vehicle.getCarModel()
-                        + " — " + vehicle.getOwnerRole(),
-                uid, Timestamp.now()
-        );
+        String uid = FirebaseAuth.getInstance().getCurrentUser() != null ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
+        AuditLog log = new AuditLog("", vehicle.getStudentName(), "", vehicle.getStudentRollNo(), "CAR_REGISTERED", vehicle.getLicensePlate() + " — " + vehicle.getCarModel() + " — " + vehicle.getOwnerRole(), uid, Timestamp.now());
         DocumentReference logRef = db.collection("access_logs").document();
         log.setId(logRef.getId());
-
         WriteBatch batch = db.batch();
         batch.set(vehicleRef, vehicle);
-        batch.update(db.collection("car_registration_requests").document(request.getRequestId()),
-                "status", "approved");
+        batch.update(db.collection("car_registration_requests").document(request.getRequestId()), "status", "approved");
         batch.set(logRef, log);
         batch.commit()
-                .addOnSuccessListener(unused ->
-                        Toast.makeText(this, "Car approved and registered",
-                                Toast.LENGTH_SHORT).show())
+                .addOnSuccessListener(unused -> Toast.makeText(this, "Car approved and registered", Toast.LENGTH_SHORT).show())
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to approve car request", e);
-                    Toast.makeText(this, "Failed to approve: " + e.getMessage(),
-                            Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Failed to approve: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
@@ -457,16 +375,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
         db.collection("car_registration_requests")
                 .document(request.getRequestId())
                 .update("status", "rejected")
-                .addOnSuccessListener(unused ->
-                        Toast.makeText(this, "Car request rejected", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(unused -> Toast.makeText(this, "Car request rejected", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
-
-    // -------------------------------------------------------------------------
-    // Parking document bootstrap
-    // -------------------------------------------------------------------------
 
     private void ensureParkingDocument() {
         db.collection("system_metadata").document("parking_status").get().addOnSuccessListener(snapshot -> {
