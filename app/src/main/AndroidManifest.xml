@@ -58,6 +58,18 @@
             android:name=".FacultyRequestsActivity"
             android:exported="false"
             android:label="My Requests" />
+        <activity
+            android:name=".WingAccessRequestActivity"
+            android:exported="false"
+            android:label="Wing Access Request" />
+        <activity
+            android:name=".AdminWingAccessActivity"
+            android:exported="false"
+            android:label="Wing Access Management" />
+        <activity
+            android:name=".WingScannerActivity"
+            android:exported="false"
+            android:label="Wing Scanner" />
     </application>
 
 </manifest>

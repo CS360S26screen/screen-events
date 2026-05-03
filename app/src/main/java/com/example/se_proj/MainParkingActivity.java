@@ -2,31 +2,40 @@ package com.example.se_proj;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.example.se_proj.adapters.ParkingVehicleAdapter;
 import com.example.se_proj.databinding.ActivityMainParkingBinding;
+import com.example.se_proj.models.RegisteredVehicle;
 import com.example.se_proj.rules.ParkingOccupancyUtils;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Real-time parking occupancy dashboard with manual increment/decrement controls.
+ * Real-time parking occupancy dashboard with live vehicle list.
  *
- * <p>Accessible from the guard drawer navigation. All occupancy changes are made
- * transactionally via {@link ParkingOccupancyUtils#clampOccupancy} to prevent over- or
- * under-counting.</p>
+ * <p>Manual ±1 override buttons are shown only to admin users; automated parking updates
+ * happen through guard check-in/out and car exit flows. The live vehicle list streams
+ * from {@code registered_vehicles} where {@code onCampus == true}.</p>
  */
 public class MainParkingActivity extends AppCompatActivity {
 
     private ActivityMainParkingBinding binding;
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private ParkingVehicleAdapter vehicleAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,8 +46,10 @@ public class MainParkingActivity extends AppCompatActivity {
         setupToolbar();
         setupDrawer();
         setupBottomNavigation();
+        setupVehicleList();
         ensureParkingDocument();
         setupParkingCounter();
+        checkAdminAndShowButtons();
 
         binding.btnParkingPlus.setOnClickListener(v -> updateParking(1));
         binding.btnParkingMinus.setOnClickListener(v -> updateParking(-1));
@@ -59,11 +70,16 @@ public class MainParkingActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.drawer_out_gate) {
                 Intent intent = new Intent(this, GuardDashboardActivity.class);
-                intent.putExtra(GuardDashboardActivity.EXTRA_GATE_MODE, GuardDashboardActivity.MODE_OUT_GATE);
+                intent.putExtra(GuardDashboardActivity.EXTRA_GATE_MODE,
+                        GuardDashboardActivity.MODE_OUT_GATE);
                 startActivity(intent);
                 finish();
                 return true;
             } else if (id == R.id.drawer_main_parking) {
+                binding.drawerLayout.closeDrawer(GravityCompat.START);
+                return true;
+            } else if (id == R.id.drawer_wing_scanner) {
+                startActivity(new Intent(this, WingScannerActivity.class));
                 binding.drawerLayout.closeDrawer(GravityCompat.START);
                 return true;
             }
@@ -93,6 +109,10 @@ public class MainParkingActivity extends AppCompatActivity {
         });
     }
 
+    // -------------------------------------------------------------------------
+    // Parking counter
+    // -------------------------------------------------------------------------
+
     private void setupParkingCounter() {
         db.collection("system_metadata").document("parking_status")
                 .addSnapshotListener((snapshot, e) -> {
@@ -119,6 +139,52 @@ public class MainParkingActivity extends AppCompatActivity {
                 });
     }
 
+    // -------------------------------------------------------------------------
+    // Live vehicle list
+    // -------------------------------------------------------------------------
+
+    private void setupVehicleList() {
+        vehicleAdapter = new ParkingVehicleAdapter(new ArrayList<>());
+        binding.rvParkingVehicles.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvParkingVehicles.setAdapter(vehicleAdapter);
+
+        db.collection("registered_vehicles")
+                .whereEqualTo("onCampus", true)
+                .addSnapshotListener((snapshots, e) -> {
+                    if (e != null || snapshots == null) return;
+                    List<RegisteredVehicle> list = new ArrayList<>();
+                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
+                        RegisteredVehicle v = doc.toObject(RegisteredVehicle.class);
+                        if (v != null) list.add(v);
+                    }
+                    vehicleAdapter.updateData(list);
+                    binding.tvNoVehicles.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
+                    binding.rvParkingVehicles.setVisibility(list.isEmpty() ? View.GONE : View.VISIBLE);
+                });
+    }
+
+    // -------------------------------------------------------------------------
+    // Admin role check
+    // -------------------------------------------------------------------------
+
+    private void checkAdminAndShowButtons() {
+        String uid = FirebaseAuth.getInstance().getCurrentUser() != null
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid() : null;
+        if (uid == null) return;
+
+        db.collection("Users").document(uid).get()
+                .addOnSuccessListener(doc -> {
+                    String role = doc.getString("role");
+                    if ("admin".equals(role)) {
+                        binding.llAdminButtons.setVisibility(View.VISIBLE);
+                    }
+                });
+    }
+
+    // -------------------------------------------------------------------------
+    // Parking document bootstrap
+    // -------------------------------------------------------------------------
+
     private void ensureParkingDocument() {
         com.google.firebase.firestore.DocumentReference docRef =
                 db.collection("system_metadata").document("parking_status");
@@ -132,18 +198,26 @@ public class MainParkingActivity extends AppCompatActivity {
         });
     }
 
+    // -------------------------------------------------------------------------
+    // Admin manual override
+    // -------------------------------------------------------------------------
+
     private void updateParking(long delta) {
         com.google.firebase.firestore.DocumentReference documentRef =
                 db.collection("system_metadata").document("parking_status");
 
         db.runTransaction(transaction -> {
-            com.google.firebase.firestore.DocumentSnapshot snapshot = transaction.get(documentRef);
-            long currentOccupancy = snapshot.exists() && snapshot.getLong("currentOccupancy") != null
-                    ? snapshot.getLong("currentOccupancy") : 0L;
-            long maxCapacity = snapshot.exists() && snapshot.getLong("maxCapacity") != null
-                    ? snapshot.getLong("maxCapacity") : 200L;
+            com.google.firebase.firestore.DocumentSnapshot snapshot =
+                    transaction.get(documentRef);
+            long currentOccupancy =
+                    snapshot.exists() && snapshot.getLong("currentOccupancy") != null
+                            ? snapshot.getLong("currentOccupancy") : 0L;
+            long maxCapacity =
+                    snapshot.exists() && snapshot.getLong("maxCapacity") != null
+                            ? snapshot.getLong("maxCapacity") : 200L;
 
-            long updatedOccupancy = ParkingOccupancyUtils.clampOccupancy(currentOccupancy, delta, maxCapacity);
+            long updatedOccupancy = ParkingOccupancyUtils.clampOccupancy(
+                    currentOccupancy, delta, maxCapacity);
 
             if (!snapshot.exists()) {
                 Map<String, Object> data = new HashMap<>();

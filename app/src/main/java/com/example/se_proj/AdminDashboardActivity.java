@@ -17,10 +17,13 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.example.se_proj.adapters.CarRegistrationRequestAdapter;
 import com.example.se_proj.adapters.VisitorRequestAdapter;
 import com.example.se_proj.databinding.ActivityAdminDashboardBinding;
 import com.example.se_proj.models.AuditLog;
 import com.example.se_proj.models.BlacklistEntry;
+import com.example.se_proj.models.CarRegistrationRequest;
+import com.example.se_proj.models.RegisteredVehicle;
 import com.example.se_proj.models.VisitorRequest;
 import com.example.se_proj.rules.BlacklistService;
 import com.example.se_proj.rules.RequestStatus;
@@ -41,6 +44,15 @@ import java.util.Map;
 /**
  * Admin control panel for approving/rejecting visitor requests, monitoring live stats,
  * and managing the blacklist (US19).
+ * Admin control panel for approving/rejecting visitor requests, managing car registration
+ * requests, and monitoring live summary stats.
+ *
+ * <p>Car registration flow: student/faculty submit a {@link CarRegistrationRequest}; admin
+ * approves here which creates a {@link RegisteredVehicle} document, or rejects which closes
+ * the request without any vehicle record.</p>
+ *
+ * <p>Outstanding: status changes and audit-log writes are separate Firestore operations
+ * (not atomic), so partial failure can leave state temporarily inconsistent.</p>
  */
 public class AdminDashboardActivity extends AppCompatActivity {
 
@@ -50,6 +62,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private VisitorRequestAdapter adapter;
     private BlacklistService blacklistService;
+    private CarRegistrationRequestAdapter carAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,19 +85,27 @@ public class AdminDashboardActivity extends AppCompatActivity {
             return false;
         });
 
-        setupRecyclerView();
+        setupVisitorRecyclerView();
+        setupCarRequestRecyclerView();
         setupSummaryStats();
         ensureParkingDocument();
         fetchPendingRequests();
         setupBlacklistButton();
+        fetchPendingCarRequests();
 
         binding.btnViewAudit.setOnClickListener(v ->
                 startActivity(new Intent(this, AdminAuditActivity.class)));
 
         blacklistService.removeExpiredEntries();
+        binding.btnWingAccess.setOnClickListener(v ->
+                startActivity(new Intent(this, AdminWingAccessActivity.class)));
     }
 
-    private void setupRecyclerView() {
+    // -------------------------------------------------------------------------
+    // RecyclerView setup
+    // -------------------------------------------------------------------------
+
+    private void setupVisitorRecyclerView() {
         adapter = new VisitorRequestAdapter(
                 new ArrayList<>(),
                 this::handleApprove,
@@ -93,6 +114,20 @@ public class AdminDashboardActivity extends AppCompatActivity {
         binding.rvRequests.setLayoutManager(new LinearLayoutManager(this));
         binding.rvRequests.setAdapter(adapter);
     }
+
+    private void setupCarRequestRecyclerView() {
+        carAdapter = new CarRegistrationRequestAdapter(
+                new ArrayList<>(),
+                request -> approveCarRequest(request),
+                request -> rejectCarRequest(request)
+        );
+        binding.rvCarRequests.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvCarRequests.setAdapter(carAdapter);
+    }
+
+    // -------------------------------------------------------------------------
+    // Summary stats
+    // -------------------------------------------------------------------------
 
     private void setupSummaryStats() {
         db.collection("visitor_requests")
@@ -113,6 +148,10 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     }
                 });
     }
+
+    // -------------------------------------------------------------------------
+    // Visitor requests
+    // -------------------------------------------------------------------------
 
     private void fetchPendingRequests() {
         db.collection("visitor_requests")
@@ -168,6 +207,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 "", request.getGuestName(), request.getGuestCNIC(),
                 request.getHostId(), "ADMIN_" + action,
                 "Action taken by Security Admin", uid, Timestamp.now()
+                "", request.getGuestName(), request.getGuestCNIC(), request.getHostId(),
+                "ADMIN_" + action, "Action taken by Security Admin", uid, Timestamp.now()
         );
         db.collection("access_logs").add(log);
     }
@@ -294,6 +335,74 @@ public class AdminDashboardActivity extends AppCompatActivity {
         cal.add(Calendar.DAY_OF_YEAR, 7);
         return new Timestamp(cal.getTime());
     }
+
+    // -------------------------------------------------------------------------
+    // Car registration requests
+    // -------------------------------------------------------------------------
+
+    private void fetchPendingCarRequests() {
+        db.collection("car_registration_requests")
+                .whereEqualTo("status", "pending")
+                .addSnapshotListener((snapshots, e) -> {
+                    if (e != null) {
+                        Log.w("AdminDashboard", "Car requests listen failed.", e);
+                        return;
+                    }
+
+                    List<CarRegistrationRequest> list = new ArrayList<>();
+                    if (snapshots != null) {
+                        for (DocumentSnapshot doc : snapshots.getDocuments()) {
+                            CarRegistrationRequest r = doc.toObject(CarRegistrationRequest.class);
+                            if (r != null) list.add(r);
+                        }
+                    }
+                    carAdapter.updateData(list);
+                    binding.tvCarRequestsEmpty.setVisibility(
+                            list.isEmpty() ? View.VISIBLE : View.GONE);
+                    binding.rvCarRequests.setVisibility(
+                            list.isEmpty() ? View.GONE : View.VISIBLE);
+                });
+    }
+
+    private void approveCarRequest(CarRegistrationRequest request) {
+        // Create RegisteredVehicle document
+        RegisteredVehicle vehicle = new RegisteredVehicle(
+                "", request.getOwnerRollNo(), request.getOwnerName(),
+                request.getStudentUid(), request.getLicensePlate(),
+                request.getCarModel(), false, null, null
+        );
+
+        db.collection("registered_vehicles").add(vehicle)
+                .addOnSuccessListener(docRef ->
+                        db.collection("car_registration_requests")
+                                .document(request.getRequestId())
+                                .update("status", "approved")
+                                .addOnSuccessListener(unused ->
+                                        Toast.makeText(this, "Car approved and registered",
+                                                Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e ->
+                                        Log.e("AdminDashboard", "Failed to mark approved", e)))
+                .addOnFailureListener(e -> {
+                    Log.e("AdminDashboard", "Failed to create vehicle", e);
+                    Toast.makeText(this, "Failed to approve: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void rejectCarRequest(CarRegistrationRequest request) {
+        db.collection("car_registration_requests")
+                .document(request.getRequestId())
+                .update("status", "rejected")
+                .addOnSuccessListener(unused ->
+                        Toast.makeText(this, "Car request rejected", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show());
+    }
+
+    // -------------------------------------------------------------------------
+    // Parking document bootstrap
+    // -------------------------------------------------------------------------
 
     private void ensureParkingDocument() {
         db.collection("system_metadata").document("parking_status").get().addOnSuccessListener(snapshot -> {

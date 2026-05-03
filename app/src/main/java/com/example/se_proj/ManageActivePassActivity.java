@@ -44,8 +44,6 @@ public class ManageActivePassActivity extends AppCompatActivity {
             if (id == R.id.nav_new_pass) {
                 finish();
                 return true;
-            } else if (id == R.id.nav_profile) {
-                return true;
             }
             return true;
         });
