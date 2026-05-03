@@ -2,11 +2,14 @@ package com.example.se_proj;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -27,6 +30,7 @@ import com.example.se_proj.rules.RequestStatus;
 import com.example.se_proj.rules.RequestValidationUtils;
 import com.example.se_proj.rules.VisitWindowEvaluator;
 import com.example.se_proj.rules.ZoneAccessLogger;
+import com.google.android.material.button.MaterialButton;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
@@ -83,6 +87,7 @@ public class GuardDashboardActivity extends AppCompatActivity {
     private DeliveryTrackingService deliveryService;
 
     private ListenerRegistration alertListenerReg;
+    private int selectedGuardHomeTab = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -221,7 +226,7 @@ public class GuardDashboardActivity extends AppCompatActivity {
                 });
 
         binding.btnViewParking.setOnClickListener(v ->
-                startActivity(new Intent(this, MainParkingActivity.class)));
+                startGuardPortalActivity(new Intent(this, MainParkingActivity.class), false));
     }
 
     private void searchVisitorByCnic(String cnic) {
@@ -833,7 +838,9 @@ public class GuardDashboardActivity extends AppCompatActivity {
                 Intent intent = new Intent(this, LoginActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
+                overridePendingTransition(0, 0);
                 finish();
+                overridePendingTransition(0, 0);
                 return true;
             }
             return false;
@@ -845,10 +852,17 @@ public class GuardDashboardActivity extends AppCompatActivity {
                 binding.drawerLayout.openDrawer(GravityCompat.START));
         binding.drawerNavigation.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
-            if (id == R.id.drawer_in_gate) { currentZoneId = "in_gate"; binding.toolbar.setTitle("In-Gate"); }
-            else if (id == R.id.drawer_out_gate) { currentZoneId = "out_gate"; binding.toolbar.setTitle("Out-Gate"); }
-            else if (id == R.id.drawer_main_parking) { startActivity(new Intent(this, MainParkingActivity.class)); }
-            else if (id == R.id.drawer_wing_scanner) { startActivity(new Intent(this, WingScannerActivity.class)); }
+            if (id == R.id.drawer_in_gate) {
+                currentZoneId = "in_gate";
+                binding.toolbar.setTitle("In-Gate - Live Dashboard");
+            } else if (id == R.id.drawer_out_gate) {
+                currentZoneId = "out_gate";
+                binding.toolbar.setTitle("Out-Gate - Live Dashboard");
+            } else if (id == R.id.drawer_main_parking) {
+                startGuardPortalActivity(new Intent(this, MainParkingActivity.class), false);
+            } else if (id == R.id.drawer_wing_scanner) {
+                startGuardPortalActivity(new Intent(this, WingScannerActivity.class), false);
+            }
             binding.drawerLayout.closeDrawer(GravityCompat.START);
             return true;
         });
@@ -857,10 +871,85 @@ public class GuardDashboardActivity extends AppCompatActivity {
     private void setupBottomNav() {
         binding.bottomNavigation.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
-            if (id == R.id.nav_logs) { startActivity(new Intent(this, AdminAuditActivity.class)); return true; }
-            else if (id == R.id.nav_adhoc) { startActivity(new Intent(this, WalkInRegistrationActivity.class)); return true; }
-            return true;
+            if (id == R.id.nav_home) {
+                return true;
+            } else if (id == R.id.nav_logs) {
+                startGuardPortalActivity(new Intent(this, AdminAuditActivity.class), false);
+                return true;
+            } else if (id == R.id.nav_adhoc) {
+                startGuardPortalActivity(new Intent(this, WalkInRegistrationActivity.class), false);
+                return true;
+            } else if (id == R.id.nav_settings) {
+                Toast.makeText(this, "Settings coming soon", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            return false;
         });
+    }
+
+    private void startGuardPortalActivity(Intent intent, boolean finishCurrent) {
+        startActivity(intent);
+        overridePendingTransition(0, 0);
+        if (finishCurrent) {
+            finish();
+            overridePendingTransition(0, 0);
+        }
+    }
+
+    private void selectGuardHomeTab(int index, boolean animate) {
+        selectedGuardHomeTab = index;
+        View selectedTab = index == 0
+                ? binding.tabGuests
+                : index == 1 ? binding.tabDelivery : binding.tabCars;
+
+        binding.guardHomeTabContainer.post(() -> {
+            int targetWidth = selectedTab.getWidth();
+            if (targetWidth <= 0) return;
+
+            FrameLayout.LayoutParams params =
+                    (FrameLayout.LayoutParams) binding.guardHomeTabHighlight.getLayoutParams();
+            if (params.width != targetWidth) {
+                params.width = targetWidth;
+                binding.guardHomeTabHighlight.setLayoutParams(params);
+            }
+
+            float targetX = binding.guardHomeTabRow.getX() + selectedTab.getX();
+            if (animate) {
+                binding.guardHomeTabHighlight.animate()
+                        .x(targetX)
+                        .setDuration(220)
+                        .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                        .start();
+            } else {
+                binding.guardHomeTabHighlight.setX(targetX);
+            }
+        });
+
+        updateGuardHomeTabText(binding.tabGuests, index == 0);
+        updateGuardHomeTabButton(binding.tabDelivery, index == 1);
+        updateGuardHomeTabButton(binding.tabCars, index == 2);
+        binding.cardVerifyGuest.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
+        binding.cardFindCurrentGuest.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
+        binding.cardDeliveryTracking.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
+        binding.carTrackingSection.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
+        if (index != 0) {
+            binding.cvResult.setVisibility(View.GONE);
+            binding.tvEmptyState.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateGuardHomeTabText(TextView tab, boolean selected) {
+        int color = selected ? Color.WHITE : Color.parseColor("#3D4A5C");
+        tab.setTextColor(color);
+        tab.setCompoundDrawableTintList(ColorStateList.valueOf(color));
+        tab.setTypeface(null, selected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+    }
+
+    private void updateGuardHomeTabButton(MaterialButton tab, boolean selected) {
+        int color = selected ? Color.WHITE : Color.parseColor("#3D4A5C");
+        tab.setTextColor(color);
+        tab.setIconTint(ColorStateList.valueOf(color));
+        tab.setTypeface(null, selected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
     }
 
     private void setupSearchButtons() {
@@ -891,9 +980,17 @@ public class GuardDashboardActivity extends AppCompatActivity {
 
     private void setupDeliveryButtons() {
         try {
-            binding.getRoot().findViewById(R.id.btnDeliveryEntry).setOnClickListener(v -> showDeliveryEntryDialog());
-            binding.getRoot().findViewById(R.id.btnDeliveryExit).setOnClickListener(v -> showDeliveryExitDialog());
-        } catch (Exception ignored) {}
+            binding.guardHomeTabContainer.post(() ->
+                    selectGuardHomeTab(selectedGuardHomeTab, false));
+            binding.tabGuests.setOnClickListener(v -> selectGuardHomeTab(0, true));
+            binding.tabDelivery.setOnClickListener(v -> selectGuardHomeTab(1, true));
+            binding.tabCars.setOnClickListener(v -> selectGuardHomeTab(2, true));
+            binding.btnDeliveryEntry.setOnClickListener(v -> showDeliveryEntryDialog());
+            binding.btnDeliveryExit.setOnClickListener(v -> showDeliveryExitDialog());
+        } catch (Exception e) {
+            Log.w(TAG, "Delivery buttons not found in layout — delivery UI unavailable. "
+                    + "Add btnDeliveryEntry and btnDeliveryExit to activity_guard_dashboard.xml");
+        }
     }
 
     private void setChipStatus(String text, int bgColorRes, int textColorRes) {
