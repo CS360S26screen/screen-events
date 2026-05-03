@@ -53,7 +53,7 @@ public final class VisitWindowEvaluator {
             LocalDate currentDate,
             LocalTime currentTime
     ) {
-        if (request.getOnCampus()) {
+        if (request.isOnCampus()) {
             return new Decision(
                     VisitWindowState.INSIDE,
                     "INSIDE",

@@ -8,7 +8,11 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.se_proj.databinding.ActivityManageActivePassBinding;
 import com.example.se_proj.models.VisitorRequest;
+import com.example.se_proj.rules.RequestStatus;
 import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Displays the details of a student's active guest pass and allows cancellation.
@@ -104,10 +108,15 @@ public class ManageActivePassActivity extends AppCompatActivity {
 
     private void cancelPass() {
         if (requestId == null) return;
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", RequestStatus.CANCELLED);
+        updates.put("onCampus", false);
+
         db.collection("visitor_requests").document(requestId)
-                .update("status", "cancelled")
+                .update(updates)
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "Pass Cancelled Successfully", Toast.LENGTH_SHORT).show();
+                    setResult(RESULT_OK);
                     finish();
                 })
                 .addOnFailureListener(e ->

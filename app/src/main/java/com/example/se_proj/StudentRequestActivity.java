@@ -44,7 +44,7 @@ import java.util.Locale;
  *
  * <p><b>My Cars tab</b>: students submit a registration request (plate + model) which goes to
  * admin for approval. Pending requests are shown with a status chip and can be cancelled.
- * Admin-approved cars are shown read-only from {@code registered_vehicles}.</p>
+ * Admin-approved cars are shown read-only from {@code cars_registered}.</p>
  *
  * <p>The 2-vehicle cap counts pending AND approved vehicles so students cannot queue unlimited
  * requests.</p>
@@ -68,7 +68,7 @@ public class StudentRequestActivity extends AppCompatActivity {
     private TextView myGuestsEmptyView;
     private StudentGuestLogAdapter myGuestsAdapter;
 
-    // My Cars — approved vehicles from registered_vehicles
+    // My Cars — approved vehicles from cars_registered
     private RecyclerView carsRecycler;
     private TextView carsEmptyView;
     private VehicleListAdapter carsAdapter;
@@ -126,6 +126,20 @@ public class StudentRequestActivity extends AppCompatActivity {
 
         binding.btnSubmit.setOnClickListener(v -> checkLimitAndSubmit());
         binding.btnRegisterCar.setOnClickListener(v -> submitCarRequest());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (binding == null) return;
+
+        int selectedNavId = binding.bottomNavigation.getSelectedItemId();
+        if (selectedNavId == R.id.nav_my_guests) {
+            fetchMyGuestsLog();
+        } else if (selectedNavId == R.id.nav_my_cars) {
+            loadApprovedCars();
+            loadPendingCarRequests();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -277,6 +291,10 @@ public class StudentRequestActivity extends AppCompatActivity {
                     for (DocumentSnapshot doc : documents.getDocuments()) {
                         VisitorRequest request = doc.toObject(VisitorRequest.class);
                         if (request != null) {
+                            if (RequestStatus.CANCELLED.equals(
+                                    RequestStatus.normalize(request.getStatus()))) {
+                                continue;
+                            }
                             if (request.getRequestId().isEmpty()) {
                                 request = request.withRequestId(doc.getId());
                             }
@@ -367,14 +385,14 @@ public class StudentRequestActivity extends AppCompatActivity {
     // My Cars — data loading
     // -------------------------------------------------------------------------
 
-    /** Loads admin-approved vehicles for this student from {@code registered_vehicles}. */
+    /** Loads admin-approved vehicles for this student from {@code cars_registered}. */
     private void loadApprovedCars() {
         if (studentUid.isEmpty()) {
             if (carsEmptyView != null) carsEmptyView.setVisibility(View.VISIBLE);
             return;
         }
 
-        db.collection("registered_vehicles")
+        db.collection("cars_registered")
                 .whereEqualTo("studentUid", studentUid)
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null) {
@@ -450,7 +468,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                 .whereEqualTo("status", "pending")
                 .get()
                 .addOnSuccessListener(pendingSnap -> {
-                    db.collection("registered_vehicles")
+                    db.collection("cars_registered")
                             .whereEqualTo("studentUid", studentUid)
                             .get()
                             .addOnSuccessListener(approvedSnap -> {
@@ -482,14 +500,25 @@ public class StudentRequestActivity extends AppCompatActivity {
                 .whereEqualTo("licensePlate", plate)
                 .get()
                 .addOnSuccessListener(existingSnap -> {
-                    if (!existingSnap.isEmpty()) {
+                    boolean hasActiveRequest = false;
+                    for (DocumentSnapshot doc : existingSnap.getDocuments()) {
+                        CarRegistrationRequest existing =
+                                doc.toObject(CarRegistrationRequest.class);
+                        if (existing != null
+                                && ("pending".equals(existing.getStatus())
+                                || "approved".equals(existing.getStatus()))) {
+                            hasActiveRequest = true;
+                            break;
+                        }
+                    }
+                    if (hasActiveRequest) {
                         Toast.makeText(this,
                                 "This plate already has a pending or approved request",
                                 Toast.LENGTH_SHORT).show();
                         binding.btnRegisterCar.setEnabled(true);
                         return;
                     }
-                    db.collection("registered_vehicles")
+                    db.collection("cars_registered")
                             .whereEqualTo("licensePlate", plate)
                             .get()
                             .addOnSuccessListener(regSnap -> {
@@ -602,8 +631,11 @@ public class StudentRequestActivity extends AppCompatActivity {
                 ? data.get("studentId").toString() : null;
         String name = (data != null && data.get("name") != null)
                 ? data.get("name").toString() : null;
+        String email = (data != null && data.get("email") != null)
+                ? data.get("email").toString()
+                : (auth.getCurrentUser() != null ? auth.getCurrentUser().getEmail() : null);
 
-        studentRollNo = UserProfileUtils.resolveHostId(rollNumber, studentId, docId);
+        studentRollNo = UserProfileUtils.resolveHostId(rollNumber, studentId, docId, email);
         studentName = name != null ? name : "";
         binding.btnSubmit.setEnabled(!studentRollNo.isEmpty());
 

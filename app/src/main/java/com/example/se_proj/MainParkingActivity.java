@@ -29,7 +29,7 @@ import java.util.Map;
  *
  * <p>Manual ±1 override buttons are shown only to admin users; automated parking updates
  * happen through guard check-in/out and car exit flows. The live vehicle list streams
- * from {@code registered_vehicles} where {@code onCampus == true}.</p>
+     * from {@code cars_registered} where {@code onCampus == true}.</p>
  */
 public class MainParkingActivity extends AppCompatActivity {
 
@@ -148,7 +148,7 @@ public class MainParkingActivity extends AppCompatActivity {
         binding.rvParkingVehicles.setLayoutManager(new LinearLayoutManager(this));
         binding.rvParkingVehicles.setAdapter(vehicleAdapter);
 
-        db.collection("registered_vehicles")
+        db.collection("cars_registered")
                 .whereEqualTo("onCampus", true)
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null || snapshots == null) return;

@@ -27,10 +27,13 @@ import com.example.se_proj.models.RegisteredVehicle;
 import com.example.se_proj.models.VisitorRequest;
 import com.example.se_proj.rules.BlacklistService;
 import com.example.se_proj.rules.RequestStatus;
+import com.example.se_proj.rules.VehicleRegistrationUtils;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -207,8 +210,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 "", request.getGuestName(), request.getGuestCNIC(),
                 request.getHostId(), "ADMIN_" + action,
                 "Action taken by Security Admin", uid, Timestamp.now()
-                "", request.getGuestName(), request.getGuestCNIC(), request.getHostId(),
-                "ADMIN_" + action, "Action taken by Security Admin", uid, Timestamp.now()
         );
         db.collection("access_logs").add(log);
     }
@@ -251,12 +252,17 @@ public class AdminDashboardActivity extends AppCompatActivity {
         RadioButton rbTemp = new RadioButton(this); rbTemp.setText("Temporary (7 days)");
         rgBan.addView(rbPerm); rgBan.addView(rbTemp); rbPerm.setChecked(true);
 
+        TextView tvTypeLabel = new TextView(this);
+        tvTypeLabel.setText("Type:");
+        TextView tvBanLabel = new TextView(this);
+        tvBanLabel.setText("Ban:");
+
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(dp8 * 2, dp8, dp8 * 2, dp8);
         layout.addView(etEntityId); layout.addView(etEntityName); layout.addView(etReason);
-        layout.addView(new TextView(this){{setText("Type:");}}); layout.addView(rgType);
-        layout.addView(new TextView(this){{setText("Ban:");}}); layout.addView(rgBan);
+        layout.addView(tvTypeLabel); layout.addView(rgType);
+        layout.addView(tvBanLabel); layout.addView(rgBan);
 
         ScrollView scrollView = new ScrollView(this);
         scrollView.addView(layout);
@@ -365,25 +371,83 @@ public class AdminDashboardActivity extends AppCompatActivity {
     }
 
     private void approveCarRequest(CarRegistrationRequest request) {
-        // Create RegisteredVehicle document
+        if (request.getRequestId().isEmpty()) {
+            Toast.makeText(this, "Cannot approve: request ID missing", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("cars_registered")
+                .whereEqualTo("licensePlate", request.getLicensePlate())
+                .get()
+                .addOnSuccessListener(existingCars -> {
+                    if (!existingCars.isEmpty()) {
+                        Toast.makeText(this, "License plate already registered",
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    if ("student".equals(request.getOwnerRole())) {
+                        enforceStudentCarApprovalLimit(request);
+                    } else {
+                        createRegisteredVehicle(request);
+                    }
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Approval check failed: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show());
+    }
+
+    private void enforceStudentCarApprovalLimit(CarRegistrationRequest request) {
+        db.collection("cars_registered")
+                .whereEqualTo("studentUid", request.getStudentUid())
+                .get()
+                .addOnSuccessListener(approvedCars -> {
+                    if (VehicleRegistrationUtils.isAtCarLimit(approvedCars.size())) {
+                        Toast.makeText(this,
+                                "Student already has 2 registered vehicles",
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    createRegisteredVehicle(request);
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Approval check failed: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show());
+    }
+
+    private void createRegisteredVehicle(CarRegistrationRequest request) {
         RegisteredVehicle vehicle = new RegisteredVehicle(
                 "", request.getOwnerRollNo(), request.getOwnerName(),
-                request.getStudentUid(), request.getLicensePlate(),
+                request.getStudentUid(), request.getOwnerRole(), request.getLicensePlate(),
                 request.getCarModel(), false, null, null
         );
 
-        db.collection("registered_vehicles").add(vehicle)
-                .addOnSuccessListener(docRef ->
-                        db.collection("car_registration_requests")
-                                .document(request.getRequestId())
-                                .update("status", "approved")
-                                .addOnSuccessListener(unused ->
-                                        Toast.makeText(this, "Car approved and registered",
-                                                Toast.LENGTH_SHORT).show())
-                                .addOnFailureListener(e ->
-                                        Log.e("AdminDashboard", "Failed to mark approved", e)))
+        DocumentReference vehicleRef = db.collection("cars_registered").document();
+        vehicle.setVehicleId(vehicleRef.getId());
+
+        String uid = FirebaseAuth.getInstance().getCurrentUser() != null
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid() : "";
+        AuditLog log = new AuditLog(
+                "", vehicle.getStudentName(), "", vehicle.getStudentRollNo(),
+                "CAR_REGISTERED",
+                vehicle.getLicensePlate() + " — " + vehicle.getCarModel()
+                        + " — " + vehicle.getOwnerRole(),
+                uid, Timestamp.now()
+        );
+        DocumentReference logRef = db.collection("access_logs").document();
+        log.setId(logRef.getId());
+
+        WriteBatch batch = db.batch();
+        batch.set(vehicleRef, vehicle);
+        batch.update(db.collection("car_registration_requests").document(request.getRequestId()),
+                "status", "approved");
+        batch.set(logRef, log);
+        batch.commit()
+                .addOnSuccessListener(unused ->
+                        Toast.makeText(this, "Car approved and registered",
+                                Toast.LENGTH_SHORT).show())
                 .addOnFailureListener(e -> {
-                    Log.e("AdminDashboard", "Failed to create vehicle", e);
+                    Log.e(TAG, "Failed to approve car request", e);
                     Toast.makeText(this, "Failed to approve: " + e.getMessage(),
                             Toast.LENGTH_LONG).show();
                 });

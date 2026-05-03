@@ -27,16 +27,18 @@ import com.example.se_proj.rules.RequestStatus;
 import com.example.se_proj.rules.RequestValidationUtils;
 import com.example.se_proj.rules.VisitWindowEvaluator;
 import com.example.se_proj.rules.ZoneAccessLogger;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -78,8 +80,11 @@ public class GuardDashboardActivity extends AppCompatActivity {
     public static final String MODE_OUT_GATE   = "out_gate";
 
     private static final String TAG = "GuardDashboard";
+    private static final String CARS_COLLECTION = "cars_registered";
 
-    private static final String TAG = "GuardDashboard";
+    private interface OnVehicleValidated {
+        void onValidated(RegisteredVehicle vehicle);
+    }
 
     private ActivityGuardDashboardBinding binding;
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -119,21 +124,8 @@ public class GuardDashboardActivity extends AppCompatActivity {
         setupDeliveryButtons();
         startAlertListener();
         ensureParkingDocument();
-    }
-        binding.toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_logout) {
-                FirebaseAuth.getInstance().signOut();
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
-                return true;
-            }
-            return false;
-        });
-
-        ensureParkingDocument();
         setupLiveSummary();
+    }
 
     @Override
     protected void onDestroy() {
@@ -164,20 +156,6 @@ public class GuardDashboardActivity extends AppCompatActivity {
                             }
                         }
                     }
-        binding.drawerNavigation.setNavigationItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.drawer_in_gate) {
-                binding.toolbar.setTitle("In-Gate - Live Dashboard");
-            } else if (id == R.id.drawer_out_gate) {
-                binding.toolbar.setTitle("Out-Gate - Live Dashboard");
-            } else if (id == R.id.drawer_main_parking) {
-                startActivity(new Intent(this, MainParkingActivity.class));
-            } else if (id == R.id.drawer_wing_scanner) {
-                startActivity(new Intent(this, WingScannerActivity.class));
-            }
-            binding.drawerLayout.closeDrawer(GravityCompat.START);
-            return true;
-        });
 
                     @Override
                     public void onError(Exception e) {
@@ -248,20 +226,6 @@ public class GuardDashboardActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show();
                 searchVisitorByCnic(cnic);
             }
-        binding.btnAction.setOnClickListener(v -> {
-            if (currentRequest == null) return;
-            VisitorRequest request = currentRequest;
-            String action = request.isOnCampus() ? "Check-Out" : "Check-In";
-            new AlertDialog.Builder(this)
-                    .setTitle("Confirm Action")
-                    .setMessage("Are you sure you want to " + action
-                            + " " + request.getGuestName() + "?")
-                    .setPositiveButton("Yes", (dialog, which) -> {
-                        if (request.isOnCampus()) checkOut(request);
-                        else checkIn(request);
-                    })
-                    .setNegativeButton("No", null)
-                    .show();
         });
     }
 
@@ -290,29 +254,6 @@ public class GuardDashboardActivity extends AppCompatActivity {
     // =========================================================================
     // Visitor request lookup (existing logic, now with US18 logging)
     // =========================================================================
-        binding.btnOverride.setOnClickListener(v -> {
-            if (currentRequest == null) return;
-            VisitorRequest request = currentRequest;
-            new AlertDialog.Builder(this)
-                    .setTitle("Supervisor Override")
-                    .setMessage("Manually override entry restrictions for "
-                            + request.getGuestName() + "?")
-                    .setPositiveButton("Confirm Override",
-                            (dialog, which) -> manualOverride(request))
-                    .setNegativeButton("Cancel", null)
-                    .show();
-        });
-
-        binding.btnFindCar.setOnClickListener(v -> {
-            String plate = binding.etCarExitPlate.getText() != null
-                    ? binding.etCarExitPlate.getText().toString().trim().toUpperCase() : "";
-            if (plate.isEmpty()) {
-                Toast.makeText(this, "Please enter a license plate", Toast.LENGTH_SHORT).show();
-            } else {
-                findCarForExit(plate);
-            }
-        });
-    }
 
     // -------------------------------------------------------------------------
     // Live summary (guests on campus + parking)
@@ -457,81 +398,265 @@ public class GuardDashboardActivity extends AppCompatActivity {
     private void checkIn(VisitorRequest request) {
         String currentTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                 .format(new Date());
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("entryTime", currentTime);
-        updates.put("onCampus",  true);
-        db.collection("visitor_requests").document(request.getRequestId())
-                .update(updates)
-                .addOnSuccessListener(unused -> {
-                    zoneAccessLogger.logAccessForVisitor(
-                            request, currentZoneId,
-                            com.example.se_proj.models.ZoneAccessLog.ACTION_ENTRY,
-                            com.example.se_proj.models.ZoneAccessLog.OUTCOME_SUCCESS, "");
-                    updateParking(1);
-                    logAudit(request, "Entry", "");
-                    Toast.makeText(this, "Checked In", Toast.LENGTH_SHORT).show();
-                    promptCarSelection(request.getHostId());
-                });
+        String scannedPlate = getScannedVehicleEntryPlate();
+        if (!scannedPlate.isEmpty()) {
+            validateVehicleForEntry(request, scannedPlate,
+                    vehicle -> completeCheckIn(request, currentTime, "", vehicle));
+            return;
+        }
+        completeCheckIn(request, currentTime, "", null);
     }
 
-    /** After a successful visitor check-in, ask the guard which registered car entered. */
-    private void promptCarSelection(String studentRollNo) {
-        db.collection("registered_vehicles")
-                .whereEqualTo("studentRollNo", studentRollNo)
+    private void completeCheckIn(VisitorRequest request, String currentTime, String reason,
+                                 RegisteredVehicle vehicle) {
+        Map<String, Object> visitorUpdates = new HashMap<>();
+        visitorUpdates.put("entryTime", currentTime);
+        visitorUpdates.put("onCampus", true);
+
+        DocumentReference visitorRef =
+                db.collection("visitor_requests").document(request.getRequestId());
+        WriteBatch batch = db.batch();
+        batch.update(visitorRef, visitorUpdates);
+
+        if (vehicle != null) {
+            Map<String, Object> vehicleUpdates = new HashMap<>();
+            vehicleUpdates.put("onCampus", true);
+            vehicleUpdates.put("entryTime", currentTime);
+            vehicleUpdates.put("exitTime", null);
+            batch.update(db.collection(CARS_COLLECTION).document(vehicle.getVehicleId()), vehicleUpdates);
+        }
+
+        batch.commit().addOnSuccessListener(unused -> {
+            zoneAccessLogger.logAccessForVisitor(
+                    request, currentZoneId,
+                    com.example.se_proj.models.ZoneAccessLog.ACTION_ENTRY,
+                    com.example.se_proj.models.ZoneAccessLog.OUTCOME_SUCCESS, reason);
+            logAudit(request, "Entry", reason);
+
+            if (vehicle != null) {
+                zoneAccessLogger.logAccess(
+                        vehicle.getLicensePlate(),
+                        ZoneAccessLogger.ENTITY_TYPE_VEHICLE,
+                        vehicle.getStudentName(),
+                        currentZoneId,
+                        com.example.se_proj.models.ZoneAccessLog.ACTION_ENTRY,
+                        com.example.se_proj.models.ZoneAccessLog.OUTCOME_SUCCESS,
+                        "Vehicle owner " + vehicle.getStudentRollNo()
+                                + " matched scanned credential " + request.getHostId(),
+                        request.getRequestId());
+                logCarAudit(vehicle, "CAR_ENTRY_AUTHORIZED");
+                updateParking(1);
+                clearVehicleEntryPlate();
+                Toast.makeText(this, "Vehicle and student credentials authorized",
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Checked In", Toast.LENGTH_SHORT).show();
+            }
+        }).addOnFailureListener(e ->
+                Toast.makeText(this, "Check-in failed: " + e.getMessage(),
+                        Toast.LENGTH_SHORT).show());
+    }
+
+    private void validateVehicleForEntry(VisitorRequest request, String plate,
+                                         OnVehicleValidated callback) {
+        db.collection(CARS_COLLECTION)
+                .whereEqualTo("licensePlate", plate)
                 .get()
                 .addOnSuccessListener(snapshots -> {
-                    List<RegisteredVehicle> vehicles = new ArrayList<>();
-                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
-                        RegisteredVehicle v = doc.toObject(RegisteredVehicle.class);
-                        if (v != null) vehicles.add(v);
-                    }
-
-                    if (vehicles.isEmpty()) {
-                        // No registered cars — update parking directly
-                        updateParking(1);
+                    if (snapshots == null || snapshots.isEmpty()) {
+                        blockVehicleEntry(request, plate, "Vehicle credential not registered", null);
                         return;
                     }
 
-                    String[] options = new String[vehicles.size() + 1];
-                    for (int i = 0; i < vehicles.size(); i++) {
-                        options[i] = vehicles.get(i).getLicensePlate()
-                                + " — " + vehicles.get(i).getCarModel();
+                    DocumentSnapshot doc = snapshots.getDocuments().get(0);
+                    RegisteredVehicle vehicle = doc.toObject(RegisteredVehicle.class);
+                    if (vehicle == null) {
+                        blockVehicleEntry(request, plate, "Vehicle credential unreadable", null);
+                        return;
                     }
-                    options[vehicles.size()] = "No Car";
+                    if (vehicle.getVehicleId().isEmpty()) {
+                        vehicle.setVehicleId(doc.getId());
+                    }
 
-                    new AlertDialog.Builder(this)
-                            .setTitle("Did a car enter?")
-                            .setItems(options, (dialog, which) -> {
-                                if (which < vehicles.size()) {
-                                    markCarOnCampus(vehicles.get(which));
-                                } else {
-                                    updateParking(1);
-                                }
-                            })
-                            .setCancelable(false)
-                            .show();
+                    String scannedOwnerCredential = normalizeCredential(request.getHostId());
+                    String registeredOwnerCredential =
+                            normalizeCredential(vehicle.getStudentRollNo());
+                    if (scannedOwnerCredential.isEmpty()
+                            || registeredOwnerCredential.isEmpty()
+                            || !registeredOwnerCredential.equals(scannedOwnerCredential)) {
+                        blockVehicleEntry(request, plate,
+                                "Vehicle owner does not match scanned student credential", vehicle);
+                        return;
+                    }
+
+                    if (vehicle.isOnCampus()) {
+                        blockVehicleEntry(request, plate, "Vehicle is already marked on campus",
+                                vehicle);
+                        return;
+                    }
+
+                    if (!vehicle.isActive()) {
+                        blockVehicleEntry(request, plate, "Vehicle credential is inactive", vehicle);
+                        return;
+                    }
+
+                    if (isVehicleCredentialExpired(vehicle)) {
+                        blockVehicleEntry(request, plate, "Vehicle credential is expired", vehicle);
+                        return;
+                    }
+
+                    callback.onValidated(vehicle);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to fetch registered vehicles", e);
-                    updateParking(1);
+                    Log.e(TAG, "Failed to validate vehicle credential", e);
+                    Toast.makeText(this, "Vehicle validation failed: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
                 });
     }
 
-    private void markCarOnCampus(RegisteredVehicle vehicle) {
+    private void blockVehicleEntry(VisitorRequest request, String plate, String reason,
+                                   RegisteredVehicle vehicle) {
+        String entityName = vehicle != null ? vehicle.getStudentName() : "Unknown vehicle";
+        zoneAccessLogger.logAccess(
+                plate,
+                ZoneAccessLogger.ENTITY_TYPE_VEHICLE,
+                entityName,
+                currentZoneId,
+                com.example.se_proj.models.ZoneAccessLog.ACTION_DENIED,
+                com.example.se_proj.models.ZoneAccessLog.OUTCOME_FAILURE,
+                reason,
+                request.getRequestId());
+        logAudit(request, "VEHICLE_ENTRY_DENIED", plate + " — " + reason);
+        Toast.makeText(this, "Vehicle entry blocked: " + reason, Toast.LENGTH_LONG).show();
+    }
+
+    private String getScannedVehicleEntryPlate() {
+        return binding.etVehicleEntryPlate.getText() != null
+                ? binding.etVehicleEntryPlate.getText().toString().trim().toUpperCase(Locale.ROOT)
+                : "";
+    }
+
+    private void clearVehicleEntryPlate() {
+        if (binding.etVehicleEntryPlate.getText() != null) {
+            binding.etVehicleEntryPlate.getText().clear();
+        }
+    }
+
+    private String normalizeCredential(String value) {
+        return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
+    }
+
+    // -------------------------------------------------------------------------
+    // Standalone car entry flow
+    // -------------------------------------------------------------------------
+
+    private void findCarForEntry(String plate) {
+        db.collection(CARS_COLLECTION)
+                .whereEqualTo("licensePlate", plate)
+                .get()
+                .addOnSuccessListener(snapshots -> {
+                    if (snapshots == null || snapshots.isEmpty()) {
+                        blockStandaloneVehicleEntry(
+                                plate, "Vehicle credential not registered", null);
+                        return;
+                    }
+
+                    DocumentSnapshot doc = snapshots.getDocuments().get(0);
+                    RegisteredVehicle vehicle = doc.toObject(RegisteredVehicle.class);
+                    if (vehicle == null) {
+                        blockStandaloneVehicleEntry(
+                                plate, "Vehicle credential unreadable", null);
+                        return;
+                    }
+                    if (vehicle.getVehicleId().isEmpty()) {
+                        vehicle.setVehicleId(doc.getId());
+                    }
+
+                    if (vehicle.isOnCampus()) {
+                        blockStandaloneVehicleEntry(
+                                plate, "Vehicle is already marked on campus", vehicle);
+                        return;
+                    }
+
+                    if (!vehicle.isActive()) {
+                        blockStandaloneVehicleEntry(
+                                plate, "Vehicle credential is inactive", vehicle);
+                        return;
+                    }
+
+                    if (isVehicleCredentialExpired(vehicle)) {
+                        blockStandaloneVehicleEntry(
+                                plate, "Vehicle credential is expired", vehicle);
+                        return;
+                    }
+
+                    new AlertDialog.Builder(this)
+                            .setTitle("Car Found: " + vehicle.getLicensePlate())
+                            .setMessage(buildVehicleOwnerMessage(vehicle))
+                            .setPositiveButton("Check In Car",
+                                    (d, w) -> performCarEntry(vehicle))
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Search failed: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show());
+    }
+
+    private void performCarEntry(RegisteredVehicle vehicle) {
         String currentTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                 .format(new Date());
         Map<String, Object> updates = new HashMap<>();
         updates.put("onCampus", true);
         updates.put("entryTime", currentTime);
-        db.collection("registered_vehicles").document(vehicle.getVehicleId())
+        updates.put("exitTime", null);
+
+        db.collection(CARS_COLLECTION).document(vehicle.getVehicleId())
                 .update(updates)
-                .addOnSuccessListener(unused -> updateParking(1))
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to mark car on campus", e);
+                .addOnSuccessListener(unused -> {
                     updateParking(1);
-                    Toast.makeText(this, "Warning: could not mark car as on campus",
-                            Toast.LENGTH_SHORT).show();
-                });
+                    zoneAccessLogger.logAccess(
+                            vehicle.getLicensePlate(),
+                            ZoneAccessLogger.ENTITY_TYPE_VEHICLE,
+                            vehicle.getStudentName(),
+                            currentZoneId,
+                            com.example.se_proj.models.ZoneAccessLog.ACTION_ENTRY,
+                            com.example.se_proj.models.ZoneAccessLog.OUTCOME_SUCCESS,
+                            "CAR_ENTRY linked to owner " + vehicle.getStudentRollNo(),
+                            "");
+                    logCarAudit(vehicle, "CAR_ENTRY");
+                    Toast.makeText(this, "Car checked in", Toast.LENGTH_SHORT).show();
+                    clearVehicleEntryPlate();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed to update car: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show());
+    }
+
+    private boolean isVehicleCredentialExpired(RegisteredVehicle vehicle) {
+        return vehicle.getCredentialExpiresAt() != null
+                && vehicle.getCredentialExpiresAt().compareTo(Timestamp.now()) < 0;
+    }
+
+    private void blockStandaloneVehicleEntry(String plate, String reason,
+                                             RegisteredVehicle vehicle) {
+        String entityName = vehicle != null ? vehicle.getStudentName() : "Unknown vehicle";
+        zoneAccessLogger.logAccess(
+                plate,
+                ZoneAccessLogger.ENTITY_TYPE_VEHICLE,
+                entityName,
+                currentZoneId,
+                com.example.se_proj.models.ZoneAccessLog.ACTION_DENIED,
+                com.example.se_proj.models.ZoneAccessLog.OUTCOME_FAILURE,
+                reason,
+                "");
+        Toast.makeText(this, "Vehicle entry blocked: " + reason, Toast.LENGTH_LONG).show();
+    }
+
+    private String buildVehicleOwnerMessage(RegisteredVehicle vehicle) {
+        return vehicle.getCarModel()
+                + "\nOwner: " + vehicle.getStudentName()
+                + " (" + vehicle.getStudentRollNo() + ")";
     }
 
     // -------------------------------------------------------------------------
@@ -539,7 +664,7 @@ public class GuardDashboardActivity extends AppCompatActivity {
     // -------------------------------------------------------------------------
 
     private void findCarForExit(String plate) {
-        db.collection("registered_vehicles")
+        db.collection(CARS_COLLECTION)
                 .whereEqualTo("licensePlate", plate)
                 .whereEqualTo("onCampus", true)
                 .get()
@@ -554,12 +679,13 @@ public class GuardDashboardActivity extends AppCompatActivity {
                     DocumentSnapshot doc = snapshots.getDocuments().get(0);
                     RegisteredVehicle vehicle = doc.toObject(RegisteredVehicle.class);
                     if (vehicle == null) return;
+                    if (vehicle.getVehicleId().isEmpty()) {
+                        vehicle.setVehicleId(doc.getId());
+                    }
 
                     new AlertDialog.Builder(this)
                             .setTitle("Car Found: " + vehicle.getLicensePlate())
-                            .setMessage(vehicle.getCarModel() + "\nStudent: "
-                                    + vehicle.getStudentName()
-                                    + " (" + vehicle.getStudentRollNo() + ")")
+                            .setMessage(buildVehicleOwnerMessage(vehicle))
                             .setPositiveButton("Check Out Car",
                                     (d, w) -> performCarExit(vehicle, false))
                             .setNeutralButton("Driver Only Exit",
@@ -578,11 +704,20 @@ public class GuardDashboardActivity extends AppCompatActivity {
         Map<String, Object> updates = new HashMap<>();
         updates.put("onCampus", false);
         updates.put("exitTime", currentTime);
-        db.collection("registered_vehicles").document(vehicle.getVehicleId())
+        db.collection(CARS_COLLECTION).document(vehicle.getVehicleId())
                 .update(updates)
                 .addOnSuccessListener(unused -> {
                     updateParking(-1);
                     String action = driverOnly ? "CAR_EXIT_DRIVER_ONLY" : "CAR_EXIT";
+                    zoneAccessLogger.logAccess(
+                            vehicle.getLicensePlate(),
+                            ZoneAccessLogger.ENTITY_TYPE_VEHICLE,
+                            vehicle.getStudentName(),
+                            currentZoneId,
+                            com.example.se_proj.models.ZoneAccessLog.ACTION_EXIT,
+                            com.example.se_proj.models.ZoneAccessLog.OUTCOME_SUCCESS,
+                            action + " linked to owner " + vehicle.getStudentRollNo(),
+                            "");
                     logCarAudit(vehicle, action);
                     String msg = driverOnly
                             ? "Car checked out (driver only — student remains on campus)"
@@ -614,10 +749,8 @@ public class GuardDashboardActivity extends AppCompatActivity {
                             request, currentZoneId,
                             com.example.se_proj.models.ZoneAccessLog.ACTION_EXIT,
                             com.example.se_proj.models.ZoneAccessLog.OUTCOME_SUCCESS, "");
-                    updateParking(-1);
                     Toast.makeText(this, "Checked Out", Toast.LENGTH_SHORT).show();
                     logAudit(request, "Exit", "");
-                    // Parking decrement for the person (car exit is handled separately via plate)
                     Toast.makeText(this, "Visitor Checked Out", Toast.LENGTH_SHORT).show();
                 });
     }
@@ -625,22 +758,13 @@ public class GuardDashboardActivity extends AppCompatActivity {
     private void manualOverride(VisitorRequest request) {
         String currentTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                 .format(new Date());
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("entryTime", currentTime);
-        updates.put("onCampus",  true);
-        db.collection("visitor_requests").document(request.getRequestId())
-                .update(updates)
-                .addOnSuccessListener(unused -> {
-                    zoneAccessLogger.logAccessForVisitor(
-                            request, currentZoneId,
-                            com.example.se_proj.models.ZoneAccessLog.ACTION_ENTRY,
-                            com.example.se_proj.models.ZoneAccessLog.OUTCOME_SUCCESS,
-                            "Supervisor Override");
-                    updateParking(1);
-                    logAudit(request, "Entry", "Supervisor Override");
-                    promptCarSelection(request.getHostId());
-                    Toast.makeText(this, "Override successful", Toast.LENGTH_SHORT).show();
-                });
+        String scannedPlate = getScannedVehicleEntryPlate();
+        if (!scannedPlate.isEmpty()) {
+            validateVehicleForEntry(request, scannedPlate,
+                    vehicle -> completeCheckIn(request, currentTime, "Supervisor Override", vehicle));
+            return;
+        }
+        completeCheckIn(request, currentTime, "Supervisor Override", null);
     }
 
     // =========================================================================
@@ -815,6 +939,8 @@ public class GuardDashboardActivity extends AppCompatActivity {
                 binding.toolbar.setTitle("Out-Gate - Live Dashboard");
             } else if (id == R.id.drawer_main_parking) {
                 startActivity(new Intent(this, MainParkingActivity.class));
+            } else if (id == R.id.drawer_wing_scanner) {
+                startActivity(new Intent(this, WingScannerActivity.class));
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START);
             return true;
@@ -850,6 +976,26 @@ public class GuardDashboardActivity extends AppCompatActivity {
                 searchCurrentVisitorsByHost(roll);
             } else {
                 Toast.makeText(this, "Please enter Host Roll Number", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        binding.btnFindCar.setOnClickListener(v -> {
+            String plate = binding.etCarExitPlate.getText() != null
+                    ? binding.etCarExitPlate.getText().toString().trim().toUpperCase(Locale.ROOT)
+                    : "";
+            if (plate.isEmpty()) {
+                Toast.makeText(this, "Please enter a license plate", Toast.LENGTH_SHORT).show();
+            } else {
+                findCarForExit(plate);
+            }
+        });
+
+        binding.btnEnterCar.setOnClickListener(v -> {
+            String plate = getScannedVehicleEntryPlate();
+            if (plate.isEmpty()) {
+                Toast.makeText(this, "Please enter a license plate", Toast.LENGTH_SHORT).show();
+            } else {
+                findCarForEntry(plate);
             }
         });
     }

@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.se_proj.adapters.FacultyRequestAdapter;
+import com.example.se_proj.adapters.PendingCarRequestAdapter;
 import com.example.se_proj.databinding.ActivityFacultyRequestsBinding;
 import com.example.se_proj.models.CarRegistrationRequest;
 import com.example.se_proj.models.VisitorRequest;
@@ -24,6 +25,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -44,19 +46,28 @@ import java.util.Locale;
  */
 public class FacultyRequestsActivity extends AppCompatActivity {
 
+    public static final String EXTRA_FILTER_MODE = "faculty_request_filter_mode";
+    public static final String MODE_APPROVED = "approved";
+    public static final String MODE_PENDING = "pending";
+
     private ActivityFacultyRequestsBinding binding;
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private final FirebaseAuth auth = FirebaseAuth.getInstance();
     private FacultyRequestAdapter adapter;
+    private PendingCarRequestAdapter carAdapter;
     private String facultyId = "";
     private String facultyName = "";
     private String facultyUid = "";
+    private ListenerRegistration guestRequestsListener;
+    private ListenerRegistration carRequestsListener;
+    private String filterMode = MODE_PENDING;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityFacultyRequestsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        filterMode = resolveFilterMode(getIntent());
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
         binding.toolbar.inflateMenu(R.menu.top_app_bar);
@@ -73,15 +84,73 @@ public class FacultyRequestsActivity extends AppCompatActivity {
         });
 
         setupRecyclerView();
+        setupScreenLabels();
+        setupBottomNavigation();
         loadUserProfile();
+    }
 
-        binding.fabAddRequest.setOnClickListener(v ->
-                startActivity(new Intent(this, RequestSubmissionActivity.class)));
+    private void setupBottomNavigation() {
+        binding.bottomNavigation.setSelectedItemId(MODE_APPROVED.equals(filterMode)
+                ? R.id.nav_faculty_approved
+                : R.id.nav_faculty_pending);
+        binding.bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_faculty_guest) {
+                Intent intent = new Intent(this, RequestSubmissionActivity.class);
+                intent.putExtra(RequestSubmissionActivity.EXTRA_MODE, RequestSubmissionActivity.MODE_GUEST);
+                startActivity(intent);
+                finish();
+                return true;
+            } else if (id == R.id.nav_faculty_car) {
+                Intent intent = new Intent(this, RequestSubmissionActivity.class);
+                intent.putExtra(RequestSubmissionActivity.EXTRA_MODE, RequestSubmissionActivity.MODE_CAR);
+                startActivity(intent);
+                finish();
+                return true;
+            } else if (id == R.id.nav_faculty_approved) {
+                if (MODE_APPROVED.equals(filterMode)) {
+                    return true;
+                }
+                openFilteredRequests(MODE_APPROVED);
+                return true;
+            } else if (id == R.id.nav_faculty_pending) {
+                if (MODE_PENDING.equals(filterMode)) {
+                    return true;
+                }
+                openFilteredRequests(MODE_PENDING);
+                return true;
+            }
+            return false;
+        });
+    }
 
-        binding.fabMyCars.setOnClickListener(v -> showCarRegistrationDialog());
+    private String resolveFilterMode(Intent intent) {
+        String mode = intent != null ? intent.getStringExtra(EXTRA_FILTER_MODE) : null;
+        return MODE_APPROVED.equals(mode) ? MODE_APPROVED : MODE_PENDING;
+    }
 
-        binding.fabWingAccess.setOnClickListener(v ->
-                startActivity(new Intent(this, WingAccessRequestActivity.class)));
+    private void openFilteredRequests(String mode) {
+        Intent intent = new Intent(this, FacultyRequestsActivity.class);
+        intent.putExtra(EXTRA_FILTER_MODE, mode);
+        startActivity(intent);
+        finish();
+    }
+
+    private void setupScreenLabels() {
+        boolean approved = MODE_APPROVED.equals(filterMode);
+        binding.toolbar.setTitle(approved ? "Approved Requests" : "Pending Requests");
+        binding.tvGuestRequestsTitle.setText(approved
+                ? "Approved Guest Requests"
+                : "Pending Guest Requests");
+        binding.tvCarRequestsTitle.setText(approved
+                ? "Approved Car Requests"
+                : "Pending Car Requests");
+        binding.tvEmptyGuestRequests.setText(approved
+                ? "No approved guest requests yet."
+                : "No pending guest requests.");
+        binding.tvEmptyCarRequests.setText(approved
+                ? "No approved car requests yet."
+                : "No pending car requests.");
     }
 
     private void setupRecyclerView() {
@@ -107,6 +176,13 @@ public class FacultyRequestsActivity extends AppCompatActivity {
         );
         binding.rvRequests.setLayoutManager(new LinearLayoutManager(this));
         binding.rvRequests.setAdapter(adapter);
+
+        carAdapter = new PendingCarRequestAdapter(
+                new ArrayList<>(),
+                this::showCancelCarRequestConfirmation
+        );
+        binding.rvCarRequests.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvCarRequests.setAdapter(carAdapter);
     }
 
     // -------------------------------------------------------------------------
@@ -132,17 +208,22 @@ public class FacultyRequestsActivity extends AppCompatActivity {
                     facultyId = UserProfileUtils.resolveHostId(
                             doc.getString("rollNumber"),
                             doc.getString("facultyId"),
-                            doc.getId()
+                            doc.getId(),
+                            doc.getString("email")
                     );
                     String n = doc.getString("name");
                     facultyName = n != null ? n : "";
-                    fetchMyRequests();
+                    fetchMyGuestRequests();
+                    fetchMyCarRequests();
                 });
     }
 
-    private void fetchMyRequests() {
+    private void fetchMyGuestRequests() {
         if (facultyId.isEmpty()) return;
-        db.collection("visitor_requests")
+        if (guestRequestsListener != null) {
+            guestRequestsListener.remove();
+        }
+        guestRequestsListener = db.collection("visitor_requests")
                 .whereEqualTo("hostId", facultyId)
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null) return;
@@ -152,6 +233,9 @@ public class FacultyRequestsActivity extends AppCompatActivity {
                         for (DocumentSnapshot doc : snapshots.getDocuments()) {
                             VisitorRequest request = doc.toObject(VisitorRequest.class);
                             if (request != null) {
+                                if (!shouldShowGuestRequest(request)) {
+                                    continue;
+                                }
                                 if (request.getRequestId().isEmpty()) {
                                     request = request.withRequestId(doc.getId());
                                 }
@@ -160,7 +244,60 @@ public class FacultyRequestsActivity extends AppCompatActivity {
                         }
                     }
                     adapter.updateData(list);
+                    binding.tvEmptyGuestRequests.setVisibility(
+                            list.isEmpty() ? View.VISIBLE : View.GONE);
                 });
+    }
+
+    private void fetchMyCarRequests() {
+        if (facultyUid.isEmpty()) return;
+        if (carRequestsListener != null) {
+            carRequestsListener.remove();
+        }
+        carRequestsListener = db.collection("car_registration_requests")
+                .whereEqualTo("studentUid", facultyUid)
+                .addSnapshotListener((snapshots, e) -> {
+                    if (e != null) return;
+
+                    List<CarRegistrationRequest> list = new ArrayList<>();
+                    if (snapshots != null) {
+                        for (DocumentSnapshot doc : snapshots.getDocuments()) {
+                            CarRegistrationRequest request =
+                                    doc.toObject(CarRegistrationRequest.class);
+                            if (request != null) {
+                                if (!shouldShowCarRequest(request)) {
+                                    continue;
+                                }
+                                if (request.getRequestId().isEmpty()) {
+                                    request.setRequestId(doc.getId());
+                                }
+                                list.add(request);
+                            }
+                        }
+                    }
+                    carAdapter.updateData(list);
+                    binding.tvEmptyCarRequests.setVisibility(
+                            list.isEmpty() ? View.VISIBLE : View.GONE);
+                });
+    }
+
+    private boolean shouldShowGuestRequest(VisitorRequest request) {
+        String status = RequestStatus.normalize(request.getStatus());
+        if (MODE_APPROVED.equals(filterMode)) {
+            return RequestStatus.APPROVED.equals(status);
+        }
+        return RequestStatus.PENDING.equals(status)
+                || RequestStatus.PENDING_ADHOC.equals(status);
+    }
+
+    private boolean shouldShowCarRequest(CarRegistrationRequest request) {
+        String status = request.getStatus() == null
+                ? ""
+                : request.getStatus().trim().toLowerCase(Locale.ROOT);
+        if (MODE_APPROVED.equals(filterMode)) {
+            return MODE_APPROVED.equals(status);
+        }
+        return MODE_PENDING.equals(status);
     }
 
     // -------------------------------------------------------------------------
@@ -200,28 +337,7 @@ public class FacultyRequestsActivity extends AppCompatActivity {
             return;
         }
 
-        db.collection("car_registration_requests")
-                .whereEqualTo("studentUid", facultyUid)
-                .whereEqualTo("status", "pending")
-                .get()
-                .addOnSuccessListener(pendingSnap -> {
-                    db.collection("registered_vehicles")
-                            .whereEqualTo("studentUid", facultyUid)
-                            .get()
-                            .addOnSuccessListener(approvedSnap -> {
-                                int total = pendingSnap.size() + approvedSnap.size();
-                                if (VehicleRegistrationUtils.isAtCarLimit(total)) {
-                                    Toast.makeText(this,
-                                            "Maximum 2 vehicles allowed",
-                                            Toast.LENGTH_SHORT).show();
-                                    return;
-                                }
-                                checkFacultyPlateAndSubmit(plate, model);
-                            });
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Error: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show());
+        checkFacultyPlateAndSubmit(plate, model);
     }
 
     private void checkFacultyPlateAndSubmit(String plate, String model) {
@@ -229,13 +345,24 @@ public class FacultyRequestsActivity extends AppCompatActivity {
                 .whereEqualTo("licensePlate", plate)
                 .get()
                 .addOnSuccessListener(existingSnap -> {
-                    if (!existingSnap.isEmpty()) {
+                    boolean hasActiveRequest = false;
+                    for (DocumentSnapshot doc : existingSnap.getDocuments()) {
+                        CarRegistrationRequest existing =
+                                doc.toObject(CarRegistrationRequest.class);
+                        if (existing != null
+                                && ("pending".equals(existing.getStatus())
+                                || "approved".equals(existing.getStatus()))) {
+                            hasActiveRequest = true;
+                            break;
+                        }
+                    }
+                    if (hasActiveRequest) {
                         Toast.makeText(this,
                                 "This plate already has a pending or approved request",
                                 Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    db.collection("registered_vehicles")
+                    db.collection("cars_registered")
                             .whereEqualTo("licensePlate", plate)
                             .get()
                             .addOnSuccessListener(regSnap -> {
@@ -259,6 +386,35 @@ public class FacultyRequestsActivity extends AppCompatActivity {
                                                         Toast.LENGTH_SHORT).show());
                             });
                 });
+    }
+
+    private void showCancelCarRequestConfirmation(CarRegistrationRequest request) {
+        if (request.getRequestId().isEmpty()) {
+            Toast.makeText(this, "Cannot cancel: request ID missing", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!"pending".equals(request.getStatus())) {
+            Toast.makeText(this, "Only pending car requests can be cancelled",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Cancel Car Request")
+                .setMessage("Cancel the registration request for "
+                        + request.getLicensePlate() + "?")
+                .setPositiveButton("Yes, Cancel", (dialog, which) ->
+                        db.collection("car_registration_requests")
+                                .document(request.getRequestId())
+                                .delete()
+                                .addOnSuccessListener(unused ->
+                                        Toast.makeText(this, "Car request cancelled",
+                                                Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e ->
+                                        Toast.makeText(this, "Cancel failed: " + e.getMessage(),
+                                                Toast.LENGTH_SHORT).show()))
+                .setNegativeButton("No", null)
+                .show();
     }
 
     // -------------------------------------------------------------------------
@@ -327,5 +483,12 @@ public class FacultyRequestsActivity extends AppCompatActivity {
                                                 Toast.LENGTH_SHORT).show()))
                 .setNegativeButton("No", null)
                 .show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (guestRequestsListener != null) guestRequestsListener.remove();
+        if (carRequestsListener != null) carRequestsListener.remove();
     }
 }

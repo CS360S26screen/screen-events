@@ -24,53 +24,91 @@
             app:titleTextColor="@color/white" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvRequests"
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:padding="8dp"
-        android:paddingBottom="160dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:listitem="@layout/item_faculty_request" />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <!-- Wing Access FAB (top) -->
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/fabWingAccess"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:layout_marginBottom="128dp"
-        android:text="Wing Access"
-        app:backgroundTint="@color/secondary_purple"
-        app:icon="@android:drawable/ic_menu_agenda"
-        app:iconTint="@color/white"
-        app:tint="@color/white" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="16dp"
+            android:paddingBottom="120dp">
 
-    <!-- Register Car FAB (middle) -->
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/fabMyCars"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:layout_marginBottom="68dp"
-        android:text="Register Car"
-        app:backgroundTint="@color/campus_blue_primary"
-        app:icon="@android:drawable/ic_menu_directions"
-        app:iconTint="@color/white"
-        app:tint="@color/white" />
+            <TextView
+                android:id="@+id/tvGuestRequestsTitle"
+                style="@style/TextAppearance.App.TitleLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:text="Guest Requests" />
 
-    <!-- Add Guest FAB (bottom) -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabAddRequest"
-        android:layout_width="wrap_content"
+            <TextView
+                android:id="@+id/tvEmptyGuestRequests"
+                style="@style/TextAppearance.App.BodyMedium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                android:text="No guest requests submitted yet."
+                android:textColor="@color/text_color_secondary"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvRequests"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp"
+                tools:itemCount="2"
+                tools:listitem="@layout/item_faculty_request" />
+
+            <TextView
+                android:id="@+id/tvCarRequestsTitle"
+                style="@style/TextAppearance.App.TitleLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                android:text="Car Requests" />
+
+            <TextView
+                android:id="@+id/tvEmptyCarRequests"
+                style="@style/TextAppearance.App.BodyMedium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                android:text="No car registration requests submitted yet."
+                android:textColor="@color/text_color_secondary"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvCarRequests"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingTop="8dp"
+                tools:itemCount="2"
+                tools:listitem="@layout/item_pending_car_request" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:src="@android:drawable/ic_input_add"
-        app:backgroundTint="@color/status_present_green"
-        app:tint="@color/white" />
+        android:layout_gravity="bottom"
+        android:background="@color/white"
+        app:itemIconTint="@color/nav_item_selector"
+        app:itemTextColor="@color/nav_item_selector"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/faculty_nav_menu" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

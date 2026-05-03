@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_faculty_guest"
+        android:icon="@drawable/guest_pass"
+        android:title="Guest" />
+    <item
+        android:id="@+id/nav_faculty_car"
+        android:icon="@android:drawable/ic_menu_directions"
+        android:title="Car" />
+    <item
+        android:id="@+id/nav_faculty_approved"
+        android:icon="@drawable/ic_check_circle"
+        android:title="Approved" />
+    <item
+        android:id="@+id/nav_faculty_pending"
+        android:icon="@drawable/ic_clock"
+        android:title="Pending" />
+</menu>

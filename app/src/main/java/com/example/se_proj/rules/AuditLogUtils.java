@@ -68,7 +68,7 @@ public final class AuditLogUtils {
      * @return whether the visitor is overstaying.
      */
     public static boolean isOverstaying(VisitorRequest request, LocalDateTime now) {
-        if (request == null || !request.getOnCampus()) {
+        if (request == null || !request.isOnCampus()) {
             return false;
         }
         LocalDateTime visitEnd = parseVisitEnd(request);
@@ -89,7 +89,7 @@ public final class AuditLogUtils {
             LocalDateTime now,
             long reminderMinutes
     ) {
-        if (request == null || !request.getOnCampus()) {
+        if (request == null || !request.isOnCampus()) {
             return false;
         }
         LocalDateTime visitEnd = parseVisitEnd(request);

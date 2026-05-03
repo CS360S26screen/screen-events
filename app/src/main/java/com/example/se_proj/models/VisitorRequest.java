@@ -149,8 +149,6 @@ public class VisitorRequest {
     public String getEntryTime() { return entryTime; }
     public String getExitTime() { return exitTime; }
     public boolean isOnCampus() { return onCampus; }
-    /** Alias for {@link #isOnCampus()} — used by existing rule utilities. */
-    public boolean getOnCampus() { return onCampus; }
 
     // -------------------------------------------------------------------------
     // Setters (required for Firestore deserialization)
