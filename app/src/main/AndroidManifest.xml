@@ -51,6 +51,10 @@
             android:exported="false"
             android:label="Audit Trail" />
         <activity
+            android:name=".AdminBlacklistActivity"
+            android:exported="false"
+            android:label="Blacklist" />
+        <activity
             android:name=".GuardDashboardActivity"
             android:exported="false"
             android:label="Guard Dashboard" />
