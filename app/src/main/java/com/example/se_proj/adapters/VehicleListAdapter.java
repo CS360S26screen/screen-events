@@ -16,10 +16,12 @@ import com.google.android.material.chip.Chip;
 import java.util.List;
 
 /**
- * Read/write adapter for a student's registered vehicle list in the "My Cars" tab.
+ * Adapter for a user's admin-approved vehicle list in the "My Cars" tab.
  *
- * <p>Shows each car's plate, model, and on-campus status. Provides a "Remove" button
- * whose action is handled by the host activity via {@link OnDeleteClickListener}.</p>
+ * <p>Shows each car's plate, model, and on-campus chip. The Remove button is hidden
+ * by default since approved vehicles can only be removed by admin; pass
+ * {@code showDelete=true} in the constructor to re-enable it for contexts that allow
+ * direct removal (e.g. admin panel).</p>
  */
 public class VehicleListAdapter extends RecyclerView.Adapter<VehicleListAdapter.ViewHolder> {
 
@@ -28,11 +30,22 @@ public class VehicleListAdapter extends RecyclerView.Adapter<VehicleListAdapter.
     }
 
     private List<RegisteredVehicle> vehicles;
+    private final boolean showDelete;
     private final OnDeleteClickListener onDeleteClick;
 
+    /** Constructs the adapter with the Remove button hidden (read-only mode). */
     public VehicleListAdapter(List<RegisteredVehicle> vehicles,
                                OnDeleteClickListener onDeleteClick) {
+        this(vehicles, false, onDeleteClick);
+    }
+
+    /**
+     * @param showDelete pass {@code true} to show the Remove button on each item
+     */
+    public VehicleListAdapter(List<RegisteredVehicle> vehicles, boolean showDelete,
+                               OnDeleteClickListener onDeleteClick) {
         this.vehicles = vehicles;
+        this.showDelete = showDelete;
         this.onDeleteClick = onDeleteClick;
     }
 
@@ -72,7 +85,12 @@ public class VehicleListAdapter extends RecyclerView.Adapter<VehicleListAdapter.
             holder.chipOnCampus.setVisibility(View.GONE);
         }
 
-        holder.btnDeleteVehicle.setOnClickListener(v -> onDeleteClick.onDelete(vehicle));
+        if (showDelete) {
+            holder.btnDeleteVehicle.setVisibility(View.VISIBLE);
+            holder.btnDeleteVehicle.setOnClickListener(v -> onDeleteClick.onDelete(vehicle));
+        } else {
+            holder.btnDeleteVehicle.setVisibility(View.GONE);
+        }
     }
 
     @Override

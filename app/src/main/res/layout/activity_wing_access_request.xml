@@ -16,7 +16,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_menu"
+            app:navigationIcon="@android:drawable/ic_media_previous"
             app:navigationIconTint="@color/white"
             app:title="Wing Access Request"
             app:titleCentered="true"
@@ -134,6 +134,28 @@
                         android:paddingVertical="18dp" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
+
+            <!-- Reason for access -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilReason"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:hint="Reason for Access"
+                app:boxCornerRadiusBottomEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusTopStart="8dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etReason"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine"
+                    android:lines="2"
+                    android:paddingVertical="14dp" />
+            </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Wing selection -->
             <com.google.android.material.textfield.TextInputLayout

@@ -11,17 +11,14 @@ import androidx.core.content.ContextCompat;
 import com.example.se_proj.databinding.ActivityWingScannerBinding;
 import com.example.se_proj.models.WingAccessPermission;
 import com.example.se_proj.models.ZoneAccessLog;
+import com.example.se_proj.rules.WingAccessPermissionUtils;
 import com.example.se_proj.rules.WingConstants;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Self-service wing access scanner (simulated kiosk).
@@ -81,10 +78,11 @@ public class WingScannerActivity extends AppCompatActivity {
                         if (p != null) permissions.add(p);
                     }
 
+                    Calendar today = Calendar.getInstance();
                     WingAccessPermission validPerm = null;
                     boolean hasExpired = false;
                     for (WingAccessPermission perm : permissions) {
-                        if (isPermissionValid(perm)) {
+                        if (WingAccessPermissionUtils.isPermissionValid(perm, today)) {
                             validPerm = perm;
                             break;
                         } else {
@@ -110,28 +108,6 @@ public class WingScannerActivity extends AppCompatActivity {
                         Toast.makeText(this,
                                 "Error checking access: " + e.getMessage(),
                                 Toast.LENGTH_SHORT).show());
-    }
-
-    private boolean isPermissionValid(WingAccessPermission perm) {
-        if (perm.isLifetime()) return true;
-        String expiryStr = perm.getExpiryDate();
-        if (expiryStr == null || expiryStr.isEmpty()) return false;
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
-            sdf.setLenient(false);
-            Date expiry = sdf.parse(expiryStr);
-
-            Calendar cal = Calendar.getInstance();
-            cal.set(Calendar.HOUR_OF_DAY, 0);
-            cal.set(Calendar.MINUTE, 0);
-            cal.set(Calendar.SECOND, 0);
-            cal.set(Calendar.MILLISECOND, 0);
-            Date todayMidnight = cal.getTime();
-
-            return expiry != null && !expiry.before(todayMidnight);
-        } catch (ParseException e) {
-            return false;
-        }
     }
 
     private void showResult(boolean allowed, String title, String detail,

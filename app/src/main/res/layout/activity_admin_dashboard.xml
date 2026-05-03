@@ -8,148 +8,196 @@
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@color/campus_blue_primary"
+        app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@android:drawable/ic_menu_manage"
+            app:navigationIconTint="@color/white"
             app:title="Admin Control Panel"
             app:titleCentered="true"
-            app:navigationIcon="@android:drawable/ic_menu_manage" />
+            app:titleTextColor="@color/white" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <!-- Summary Statistics (Phase 4) -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cvSummary"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="16dp"
-            style="@style/Widget.Material3.CardView.Elevated"
-            app:cardBackgroundColor="@color/primary_container"
-            app:layout_constraintTop_toTopOf="parent">
+            android:orientation="vertical">
 
+            <!-- Summary Statistics -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cvSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                style="@style/Widget.Material3.CardView.Elevated"
+                app:cardBackgroundColor="@color/primary_container">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="20dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@android:drawable/ic_menu_myplaces"
+                            app:tint="@color/primary_purple" />
+
+                        <TextView
+                            android:id="@+id/tvActiveGuests"
+                            style="@style/TextAppearance.App.TitleLarge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="0" />
+
+                        <TextView
+                            style="@style/TextAppearance.App.BodyMedium"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Inside Campus" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginVertical="8dp"
+                        android:background="@color/outline" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@android:drawable/ic_menu_sort_by_size"
+                            app:tint="@color/secondary_purple" />
+
+                        <TextView
+                            android:id="@+id/tvParkingStatus"
+                            style="@style/TextAppearance.App.TitleLarge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="0/200" />
+
+                        <TextView
+                            style="@style/TextAppearance.App.BodyMedium"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Parking Space" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Approval Hub Header -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="20dp">
+                android:paddingHorizontal="16dp"
+                android:paddingTop="8dp">
 
-                <LinearLayout
+                <TextView
+                    android:id="@+id/tvPendingLabel"
+                    style="@style/TextAppearance.App.TitleLarge"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center"
-                    android:orientation="vertical">
+                    android:text="Approval Hub" />
 
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:src="@android:drawable/ic_menu_myplaces"
-                        app:tint="@color/primary_purple" />
-
-                    <TextView
-                        android:id="@+id/tvActiveGuests"
-                        style="@style/TextAppearance.App.TitleLarge"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="0" />
-
-                    <TextView
-                        style="@style/TextAppearance.App.BodyMedium"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Inside Campus" />
-                </LinearLayout>
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginVertical="8dp"
-                    android:background="@color/outline" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWingAccess"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:orientation="vertical">
+                    android:text="Wing Access →" />
 
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:src="@android:drawable/ic_menu_sort_by_size"
-                        app:tint="@color/secondary_purple" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnViewAudit"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="History →" />
 
-                    <TextView
-                        android:id="@+id/tvParkingStatus"
-                        style="@style/TextAppearance.App.TitleLarge"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="0/200" />
-
-                    <TextView
-                        style="@style/TextAppearance.App.BodyMedium"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Parking Space" />
-                </LinearLayout>
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <!-- Approval Hub Header -->
-        <TextView
-            android:id="@+id/tvPendingLabel"
-            style="@style/TextAppearance.App.TitleLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="24dp"
-            android:text="Approval Hub"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/cvSummary" />
+            <!-- Visitor request list -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvRequests"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingHorizontal="12dp"
+                android:paddingTop="8dp"
+                tools:listitem="@layout/item_visitor_request" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnViewAudit"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:text="View History →"
-            app:layout_constraintBottom_toBottomOf="@id/tvPendingLabel"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/tvPendingLabel" />
+            <!-- Car Registration Requests Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="16dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnWingAccess"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:text="Wing Access →"
-            app:layout_constraintBottom_toBottomOf="@id/tvPendingLabel"
-            app:layout_constraintEnd_toStartOf="@id/btnViewAudit"
-            app:layout_constraintTop_toTopOf="@id/tvPendingLabel" />
+                <TextView
+                    android:id="@+id/tvCarRequestsLabel"
+                    style="@style/TextAppearance.App.TitleLarge"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Car Requests" />
 
-        <!-- Request List (Phase 3) -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvRequests"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_marginTop="12dp"
-            android:paddingHorizontal="12dp"
-            android:clipToPadding="false"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvPendingLabel"
-            tools:listitem="@layout/item_visitor_request" />
+            </LinearLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            <TextView
+                android:id="@+id/tvCarRequestsEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:paddingVertical="16dp"
+                android:text="No pending car requests"
+                android:textColor="@color/text_color_secondary"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <!-- Car registration request list -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvCarRequests"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingHorizontal="4dp"
+                android:paddingBottom="24dp"
+                tools:listitem="@layout/item_car_reg_request_admin" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

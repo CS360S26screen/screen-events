@@ -46,6 +46,7 @@ public class WingAccessRequestAdapter
         final TextView tvWingReqRoll;
         final Chip chipWingReqType;
         final TextView tvWingReqWing;
+        final TextView tvWingReqReason;
         final Button btnWingApprove;
         final Button btnWingReject;
 
@@ -55,6 +56,7 @@ public class WingAccessRequestAdapter
             tvWingReqRoll = view.findViewById(R.id.tvWingReqRoll);
             chipWingReqType = view.findViewById(R.id.chipWingReqType);
             tvWingReqWing = view.findViewById(R.id.tvWingReqWing);
+            tvWingReqReason = view.findViewById(R.id.tvWingReqReason);
             btnWingApprove = view.findViewById(R.id.btnWingApprove);
             btnWingReject = view.findViewById(R.id.btnWingReject);
         }
@@ -75,6 +77,13 @@ public class WingAccessRequestAdapter
         holder.tvWingReqRoll.setText(request.getStudentRollNo());
         holder.tvWingReqWing.setText(request.getWing());
         holder.chipWingReqType.setText(request.getRequesterType().toUpperCase());
+        String reason = request.getReason();
+        if (reason != null && !reason.isEmpty()) {
+            holder.tvWingReqReason.setVisibility(View.VISIBLE);
+            holder.tvWingReqReason.setText("Reason: " + reason);
+        } else {
+            holder.tvWingReqReason.setVisibility(View.GONE);
+        }
 
         holder.btnWingApprove.setOnClickListener(v -> onApproveClick.onApprove(request));
         holder.btnWingReject.setOnClickListener(v -> onRejectClick.onReject(request));

@@ -73,6 +73,7 @@ public class GuardDashboardActivity extends AppCompatActivity {
         });
 
         ensureParkingDocument();
+        setupLiveSummary();
 
         binding.toolbar.setNavigationOnClickListener(v ->
                 binding.drawerLayout.openDrawer(GravityCompat.START));
@@ -166,6 +167,33 @@ public class GuardDashboardActivity extends AppCompatActivity {
                 findCarForExit(plate);
             }
         });
+    }
+
+    // -------------------------------------------------------------------------
+    // Live summary (guests on campus + parking)
+    // -------------------------------------------------------------------------
+
+    private void setupLiveSummary() {
+        db.collection("visitor_requests")
+                .whereEqualTo("onCampus", true)
+                .addSnapshotListener((snapshots, e) -> {
+                    int count = snapshots != null ? snapshots.size() : 0;
+                    binding.tvGuardGuestCount.setText(String.valueOf(count));
+                });
+
+        db.collection("system_metadata").document("parking_status")
+                .addSnapshotListener((snapshot, e) -> {
+                    if (snapshot != null && snapshot.exists()) {
+                        long occupancy = snapshot.getLong("currentOccupancy") != null
+                                ? snapshot.getLong("currentOccupancy") : 0;
+                        long capacity = snapshot.getLong("maxCapacity") != null
+                                ? snapshot.getLong("maxCapacity") : 200;
+                        binding.tvGuardParkingCount.setText(occupancy + "/" + capacity);
+                    }
+                });
+
+        binding.btnViewParking.setOnClickListener(v ->
+                startActivity(new Intent(this, MainParkingActivity.class)));
     }
 
     // -------------------------------------------------------------------------

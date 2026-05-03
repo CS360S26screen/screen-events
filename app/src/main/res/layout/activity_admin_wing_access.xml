@@ -8,22 +8,28 @@
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@color/campus_blue_primary">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@android:drawable/ic_media_previous"
+            app:navigationIconTint="@color/white"
             app:title="Wing Access Management"
-            app:titleCentered="true" />
+            app:titleCentered="true"
+            app:titleTextColor="@color/white" />
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:tabGravity="fill"
-            app:tabMode="fixed">
+            app:tabIndicatorColor="@color/white"
+            app:tabMode="fixed"
+            app:tabSelectedTextColor="@color/white"
+            app:tabTextColor="@color/campus_blue_light">
 
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"

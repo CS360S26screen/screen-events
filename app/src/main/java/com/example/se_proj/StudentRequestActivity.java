@@ -16,14 +16,18 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.se_proj.adapters.PendingCarRequestAdapter;
 import com.example.se_proj.adapters.StudentGuestLogAdapter;
 import com.example.se_proj.adapters.VehicleListAdapter;
 import com.example.se_proj.databinding.ActivityStudentRequestBinding;
+import com.example.se_proj.models.CarRegistrationRequest;
 import com.example.se_proj.models.RegisteredVehicle;
 import com.example.se_proj.models.VisitorRequest;
 import com.example.se_proj.rules.RequestStatus;
 import com.example.se_proj.rules.RequestValidationUtils;
 import com.example.se_proj.rules.UserProfileUtils;
+import com.example.se_proj.rules.VehicleRegistrationUtils;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -38,9 +42,12 @@ import java.util.Locale;
 /**
  * Student dashboard with four tabs: New Pass, My Guests, My Cars, Wing Access.
  *
- * <p>My Cars tab allows registering up to two vehicles (plate + model) and viewing
- * their current on-campus status. Car registration enforces plate uniqueness across
- * the entire system.</p>
+ * <p><b>My Cars tab</b>: students submit a registration request (plate + model) which goes to
+ * admin for approval. Pending requests are shown with a status chip and can be cancelled.
+ * Admin-approved cars are shown read-only from {@code registered_vehicles}.</p>
+ *
+ * <p>The 2-vehicle cap counts pending AND approved vehicles so students cannot queue unlimited
+ * requests.</p>
  */
 public class StudentRequestActivity extends AppCompatActivity {
 
@@ -61,10 +68,15 @@ public class StudentRequestActivity extends AppCompatActivity {
     private TextView myGuestsEmptyView;
     private StudentGuestLogAdapter myGuestsAdapter;
 
-    // My Cars views (added programmatically)
+    // My Cars — approved vehicles from registered_vehicles
     private RecyclerView carsRecycler;
     private TextView carsEmptyView;
     private VehicleListAdapter carsAdapter;
+
+    // My Cars — pending requests from car_registration_requests
+    private RecyclerView pendingRequestsRecycler;
+    private TextView pendingRequestsEmptyView;
+    private PendingCarRequestAdapter pendingRequestsAdapter;
 
     private String selectedDate = "";
     private String selectedStartTime = "";
@@ -113,7 +125,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                 }));
 
         binding.btnSubmit.setOnClickListener(v -> checkLimitAndSubmit());
-        binding.btnRegisterCar.setOnClickListener(v -> registerCar());
+        binding.btnRegisterCar.setOnClickListener(v -> submitCarRequest());
     }
 
     // -------------------------------------------------------------------------
@@ -155,10 +167,8 @@ public class StudentRequestActivity extends AppCompatActivity {
         binding.tilLicensePlate.setVisibility(View.GONE);
         binding.tilCarModel.setVisibility(View.GONE);
         binding.btnRegisterCar.setVisibility(View.GONE);
-        if (myGuestsRecycler != null) myGuestsRecycler.setVisibility(View.GONE);
-        if (myGuestsEmptyView != null) myGuestsEmptyView.setVisibility(View.GONE);
-        if (carsRecycler != null) carsRecycler.setVisibility(View.GONE);
-        if (carsEmptyView != null) carsEmptyView.setVisibility(View.GONE);
+        setMyGuestsVisible(false);
+        setMyCarsVisible(false);
     }
 
     private void showMyGuestsLog() {
@@ -171,9 +181,8 @@ public class StudentRequestActivity extends AppCompatActivity {
         binding.tilLicensePlate.setVisibility(View.GONE);
         binding.tilCarModel.setVisibility(View.GONE);
         binding.btnRegisterCar.setVisibility(View.GONE);
-        if (carsRecycler != null) carsRecycler.setVisibility(View.GONE);
-        if (carsEmptyView != null) carsEmptyView.setVisibility(View.GONE);
-        if (myGuestsRecycler != null) myGuestsRecycler.setVisibility(View.VISIBLE);
+        setMyCarsVisible(false);
+        setMyGuestsVisible(true);
         fetchMyGuestsLog();
     }
 
@@ -184,13 +193,28 @@ public class StudentRequestActivity extends AppCompatActivity {
         binding.tilVisitDate.setVisibility(View.GONE);
         binding.llTimeSlots.setVisibility(View.GONE);
         binding.btnSubmit.setVisibility(View.GONE);
-        if (myGuestsRecycler != null) myGuestsRecycler.setVisibility(View.GONE);
-        if (myGuestsEmptyView != null) myGuestsEmptyView.setVisibility(View.GONE);
+        setMyGuestsVisible(false);
         binding.tilLicensePlate.setVisibility(View.VISIBLE);
         binding.tilCarModel.setVisibility(View.VISIBLE);
         binding.btnRegisterCar.setVisibility(View.VISIBLE);
-        if (carsRecycler != null) carsRecycler.setVisibility(View.VISIBLE);
-        loadMyCars();
+        setMyCarsVisible(true);
+        loadApprovedCars();
+        loadPendingCarRequests();
+    }
+
+    private void setMyGuestsVisible(boolean visible) {
+        if (myGuestsRecycler != null)
+            myGuestsRecycler.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (myGuestsEmptyView != null)
+            myGuestsEmptyView.setVisibility(View.GONE);
+    }
+
+    private void setMyCarsVisible(boolean visible) {
+        int v = visible ? View.VISIBLE : View.GONE;
+        if (carsRecycler != null) carsRecycler.setVisibility(v);
+        if (carsEmptyView != null) carsEmptyView.setVisibility(View.GONE);
+        if (pendingRequestsRecycler != null) pendingRequestsRecycler.setVisibility(v);
+        if (pendingRequestsEmptyView != null) pendingRequestsEmptyView.setVisibility(View.GONE);
     }
 
     // -------------------------------------------------------------------------
@@ -272,7 +296,7 @@ public class StudentRequestActivity extends AppCompatActivity {
     }
 
     // -------------------------------------------------------------------------
-    // My Cars
+    // My Cars — programmatic views setup
     // -------------------------------------------------------------------------
 
     private void setupMyCarsViews() {
@@ -282,7 +306,8 @@ public class StudentRequestActivity extends AppCompatActivity {
         if (!(scrollChild instanceof ConstraintLayout)) return;
         ConstraintLayout contentRoot = (ConstraintLayout) scrollChild;
 
-        carsAdapter = new VehicleListAdapter(new ArrayList<>(), this::confirmDeleteVehicle);
+        // Approved cars (read-only, no delete button)
+        carsAdapter = new VehicleListAdapter(new ArrayList<>(), false, vehicle -> {});
 
         carsRecycler = new RecyclerView(this);
         carsRecycler.setId(View.generateViewId());
@@ -292,18 +317,42 @@ public class StudentRequestActivity extends AppCompatActivity {
 
         carsEmptyView = new TextView(this);
         carsEmptyView.setId(View.generateViewId());
-        carsEmptyView.setText("No cars registered yet.");
+        carsEmptyView.setText("No approved cars yet.");
         carsEmptyView.setTextSize(14f);
         carsEmptyView.setVisibility(View.GONE);
 
+        // Pending car requests
+        pendingRequestsAdapter = new PendingCarRequestAdapter(
+                new ArrayList<>(), this::cancelCarRequest);
+
+        pendingRequestsRecycler = new RecyclerView(this);
+        pendingRequestsRecycler.setId(View.generateViewId());
+        pendingRequestsRecycler.setLayoutManager(new LinearLayoutManager(this));
+        pendingRequestsRecycler.setAdapter(pendingRequestsAdapter);
+        pendingRequestsRecycler.setVisibility(View.GONE);
+
+        pendingRequestsEmptyView = new TextView(this);
+        pendingRequestsEmptyView.setId(View.generateViewId());
+        pendingRequestsEmptyView.setText("No pending requests.");
+        pendingRequestsEmptyView.setTextSize(14f);
+        pendingRequestsEmptyView.setVisibility(View.GONE);
+
+        contentRoot.addView(pendingRequestsRecycler);
+        contentRoot.addView(pendingRequestsEmptyView);
         contentRoot.addView(carsRecycler);
         contentRoot.addView(carsEmptyView);
 
-        ConstraintLayout.LayoutParams recyclerParams = new ConstraintLayout.LayoutParams(
+        ConstraintLayout.LayoutParams pendingParams = new ConstraintLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        recyclerParams.topToBottom = R.id.btnRegisterCar;
-        recyclerParams.topMargin = 16;
-        carsRecycler.setLayoutParams(recyclerParams);
+        pendingParams.topToBottom = R.id.btnRegisterCar;
+        pendingParams.topMargin = 16;
+        pendingRequestsRecycler.setLayoutParams(pendingParams);
+
+        ConstraintLayout.LayoutParams carsParams = new ConstraintLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        carsParams.topToBottom = pendingRequestsRecycler.getId();
+        carsParams.topMargin = 8;
+        carsRecycler.setLayoutParams(carsParams);
 
         ConstraintLayout.LayoutParams emptyParams = new ConstraintLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -314,7 +363,12 @@ public class StudentRequestActivity extends AppCompatActivity {
         carsEmptyView.setLayoutParams(emptyParams);
     }
 
-    private void loadMyCars() {
+    // -------------------------------------------------------------------------
+    // My Cars — data loading
+    // -------------------------------------------------------------------------
+
+    /** Loads admin-approved vehicles for this student from {@code registered_vehicles}. */
+    private void loadApprovedCars() {
         if (studentUid.isEmpty()) {
             if (carsEmptyView != null) carsEmptyView.setVisibility(View.VISIBLE);
             return;
@@ -324,7 +378,7 @@ public class StudentRequestActivity extends AppCompatActivity {
                 .whereEqualTo("studentUid", studentUid)
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null) {
-                        Log.e("StudentRequest", "Failed to load cars", e);
+                        Log.e("StudentRequest", "Failed to load approved cars", e);
                         return;
                     }
                     List<RegisteredVehicle> list = new ArrayList<>();
@@ -341,15 +395,46 @@ public class StudentRequestActivity extends AppCompatActivity {
                 });
     }
 
-    private void registerCar() {
+    /** Loads pending/rejected car requests for this student from {@code car_registration_requests}. */
+    private void loadPendingCarRequests() {
+        if (studentUid.isEmpty()) return;
+
+        db.collection("car_registration_requests")
+                .whereEqualTo("studentUid", studentUid)
+                .addSnapshotListener((snapshots, e) -> {
+                    if (e != null) {
+                        Log.e("StudentRequest", "Failed to load car requests", e);
+                        return;
+                    }
+                    List<CarRegistrationRequest> list = new ArrayList<>();
+                    if (snapshots != null) {
+                        for (DocumentSnapshot doc : snapshots.getDocuments()) {
+                            CarRegistrationRequest r = doc.toObject(CarRegistrationRequest.class);
+                            if (r != null) list.add(r);
+                        }
+                    }
+                    pendingRequestsAdapter.updateData(list);
+                    if (pendingRequestsEmptyView != null) {
+                        pendingRequestsEmptyView.setVisibility(
+                                list.isEmpty() ? View.VISIBLE : View.GONE);
+                    }
+                });
+    }
+
+    // -------------------------------------------------------------------------
+    // Car request submission
+    // -------------------------------------------------------------------------
+
+    private void submitCarRequest() {
         String plate = binding.etLicensePlate.getText() != null
                 ? binding.etLicensePlate.getText().toString().trim().toUpperCase() : "";
         String model = binding.etCarModel.getText() != null
                 ? binding.etCarModel.getText().toString().trim() : "";
 
-        if (plate.isEmpty() || model.isEmpty()) {
-            Toast.makeText(this, "Please fill in license plate and car model",
-                    Toast.LENGTH_SHORT).show();
+        VehicleRegistrationUtils.ValidationResult validation =
+                VehicleRegistrationUtils.validateCarRequest(plate, model);
+        if (!validation.isValid()) {
+            Toast.makeText(this, validation.getMessage(), Toast.LENGTH_SHORT).show();
             return;
         }
         if (studentUid.isEmpty()) {
@@ -359,31 +444,25 @@ public class StudentRequestActivity extends AppCompatActivity {
 
         binding.btnRegisterCar.setEnabled(false);
 
-        // Check 2-car limit first
-        db.collection("registered_vehicles")
+        // Count pending + approved together against the 2-vehicle cap
+        db.collection("car_registration_requests")
                 .whereEqualTo("studentUid", studentUid)
+                .whereEqualTo("status", "pending")
                 .get()
-                .addOnSuccessListener(countSnap -> {
-                    if (countSnap.size() >= 2) {
-                        Toast.makeText(this, "Maximum 2 vehicles allowed per student",
-                                Toast.LENGTH_SHORT).show();
-                        binding.btnRegisterCar.setEnabled(true);
-                        return;
-                    }
-
-                    // Check plate uniqueness across all students
+                .addOnSuccessListener(pendingSnap -> {
                     db.collection("registered_vehicles")
-                            .whereEqualTo("licensePlate", plate)
+                            .whereEqualTo("studentUid", studentUid)
                             .get()
-                            .addOnSuccessListener(plateSnap -> {
-                                if (!plateSnap.isEmpty()) {
+                            .addOnSuccessListener(approvedSnap -> {
+                                int total = pendingSnap.size() + approvedSnap.size();
+                                if (VehicleRegistrationUtils.isAtCarLimit(total)) {
                                     Toast.makeText(this,
-                                            "License plate already registered in the system",
+                                            "Maximum 2 vehicles allowed per student",
                                             Toast.LENGTH_SHORT).show();
                                     binding.btnRegisterCar.setEnabled(true);
                                     return;
                                 }
-                                saveVehicle(plate, model);
+                                checkPlateAndSubmit(plate, model);
                             })
                             .addOnFailureListener(e -> {
                                 Toast.makeText(this, "Error: " + e.getMessage(),
@@ -397,15 +476,54 @@ public class StudentRequestActivity extends AppCompatActivity {
                 });
     }
 
-    private void saveVehicle(String plate, String model) {
-        RegisteredVehicle vehicle = new RegisteredVehicle(
-                "", studentRollNo, studentName, studentUid,
-                plate, model, false, null, null
+    private void checkPlateAndSubmit(String plate, String model) {
+        // Check plate not already pending/approved for this user
+        db.collection("car_registration_requests")
+                .whereEqualTo("licensePlate", plate)
+                .get()
+                .addOnSuccessListener(existingSnap -> {
+                    if (!existingSnap.isEmpty()) {
+                        Toast.makeText(this,
+                                "This plate already has a pending or approved request",
+                                Toast.LENGTH_SHORT).show();
+                        binding.btnRegisterCar.setEnabled(true);
+                        return;
+                    }
+                    db.collection("registered_vehicles")
+                            .whereEqualTo("licensePlate", plate)
+                            .get()
+                            .addOnSuccessListener(regSnap -> {
+                                if (!regSnap.isEmpty()) {
+                                    Toast.makeText(this,
+                                            "License plate already registered in the system",
+                                            Toast.LENGTH_SHORT).show();
+                                    binding.btnRegisterCar.setEnabled(true);
+                                    return;
+                                }
+                                saveCarRequest(plate, model);
+                            })
+                            .addOnFailureListener(e -> {
+                                Toast.makeText(this, "Error: " + e.getMessage(),
+                                        Toast.LENGTH_SHORT).show();
+                                binding.btnRegisterCar.setEnabled(true);
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    binding.btnRegisterCar.setEnabled(true);
+                });
+    }
+
+    private void saveCarRequest(String plate, String model) {
+        CarRegistrationRequest request = new CarRegistrationRequest(
+                "", studentUid, studentName, studentRollNo, "student",
+                plate, model, "pending", Timestamp.now()
         );
 
-        db.collection("registered_vehicles").add(vehicle)
+        db.collection("car_registration_requests").add(request)
                 .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "Car registered", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Car request submitted — pending admin approval",
+                            Toast.LENGTH_SHORT).show();
                     clearCarForm();
                     binding.btnRegisterCar.setEnabled(true);
                 })
@@ -415,28 +533,21 @@ public class StudentRequestActivity extends AppCompatActivity {
                 });
     }
 
-    private void confirmDeleteVehicle(RegisteredVehicle vehicle) {
-        if (vehicle.isOnCampus()) {
-            Toast.makeText(this,
-                    "Cannot remove a car that is currently on campus",
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
+    private void cancelCarRequest(CarRegistrationRequest request) {
         new AlertDialog.Builder(this)
-                .setTitle("Remove Vehicle")
-                .setMessage("Remove " + vehicle.getLicensePlate()
-                        + " (" + vehicle.getCarModel() + ")?")
-                .setPositiveButton("Remove", (d, w) ->
-                        db.collection("registered_vehicles")
-                                .document(vehicle.getVehicleId())
+                .setTitle("Cancel Request")
+                .setMessage("Cancel request for " + request.getLicensePlate() + "?")
+                .setPositiveButton("Yes, Cancel", (d, w) ->
+                        db.collection("car_registration_requests")
+                                .document(request.getRequestId())
                                 .delete()
                                 .addOnSuccessListener(u ->
-                                        Toast.makeText(this, "Vehicle removed",
+                                        Toast.makeText(this, "Request cancelled",
                                                 Toast.LENGTH_SHORT).show())
                                 .addOnFailureListener(e ->
                                         Toast.makeText(this, "Failed: " + e.getMessage(),
                                                 Toast.LENGTH_SHORT).show()))
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("No", null)
                 .show();
     }
 
@@ -500,7 +611,8 @@ public class StudentRequestActivity extends AppCompatActivity {
         if (selectedNavId == R.id.nav_my_guests) {
             fetchMyGuestsLog();
         } else if (selectedNavId == R.id.nav_my_cars) {
-            loadMyCars();
+            loadApprovedCars();
+            loadPendingCarRequests();
         }
     }
 

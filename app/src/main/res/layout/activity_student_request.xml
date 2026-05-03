@@ -300,7 +300,7 @@
                 android:layout_marginBottom="24dp"
                 android:backgroundTint="@color/campus_blue_primary"
                 android:paddingVertical="16dp"
-                android:text="Register Car"
+                android:text="Submit Car Request"
                 android:textAllCaps="false"
                 android:textSize="18sp"
                 android:textStyle="bold"

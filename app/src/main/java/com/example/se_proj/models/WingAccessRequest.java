@@ -38,13 +38,17 @@ public class WingAccessRequest {
     /** Current status: {@code "pending"}, {@code "approved"}, or {@code "rejected"}. */
     private String status = "pending";
 
+    /** Student's stated reason for needing wing access. */
+    private String reason = "";
+
     private Timestamp createdAt = Timestamp.now();
 
     public WingAccessRequest() {}
 
     public WingAccessRequest(String requestId, String studentRollNo, String studentName,
                               String wing, String requestedBy, String requesterType,
-                              String facultyId, String status, Timestamp createdAt) {
+                              String facultyId, String status, String reason,
+                              Timestamp createdAt) {
         this.requestId = requestId;
         this.studentRollNo = studentRollNo;
         this.studentName = studentName;
@@ -53,6 +57,7 @@ public class WingAccessRequest {
         this.requesterType = requesterType;
         this.facultyId = facultyId;
         this.status = status;
+        this.reason = reason != null ? reason : "";
         this.createdAt = createdAt;
     }
 
@@ -64,6 +69,7 @@ public class WingAccessRequest {
     public String getRequesterType() { return requesterType; }
     public String getFacultyId() { return facultyId; }
     public String getStatus() { return status; }
+    public String getReason() { return reason; }
     public Timestamp getCreatedAt() { return createdAt; }
 
     public void setRequestId(String requestId) { this.requestId = requestId; }
@@ -74,6 +80,7 @@ public class WingAccessRequest {
     public void setRequesterType(String requesterType) { this.requesterType = requesterType; }
     public void setFacultyId(String facultyId) { this.facultyId = facultyId; }
     public void setStatus(String status) { this.status = status; }
+    public void setReason(String reason) { this.reason = reason; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
 
     @Override

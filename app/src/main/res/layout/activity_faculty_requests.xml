@@ -10,27 +10,59 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/white"
+        android:background="@color/campus_blue_primary"
         app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_menu"
+            app:navigationIcon="@android:drawable/ic_media_previous"
+            app:navigationIconTint="@color/white"
             app:title="My Guest Requests"
-            app:titleCentered="true" />
+            app:titleCentered="true"
+            app:titleTextColor="@color/white" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvRequests"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp"
         android:clipToPadding="false"
+        android:padding="8dp"
+        android:paddingBottom="160dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:listitem="@layout/item_faculty_request" />
 
+    <!-- Wing Access FAB (top) -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fabWingAccess"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:layout_marginBottom="128dp"
+        android:text="Wing Access"
+        app:backgroundTint="@color/secondary_purple"
+        app:icon="@android:drawable/ic_menu_agenda"
+        app:iconTint="@color/white"
+        app:tint="@color/white" />
+
+    <!-- Register Car FAB (middle) -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fabMyCars"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:layout_marginBottom="68dp"
+        android:text="Register Car"
+        app:backgroundTint="@color/campus_blue_primary"
+        app:icon="@android:drawable/ic_menu_directions"
+        app:iconTint="@color/white"
+        app:tint="@color/white" />
+
+    <!-- Add Guest FAB (bottom) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddRequest"
         android:layout_width="wrap_content"
@@ -38,7 +70,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:src="@android:drawable/ic_input_add"
-        app:backgroundTint="@color/campus_blue_primary"
+        app:backgroundTint="@color/status_present_green"
         app:tint="@color/white" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
