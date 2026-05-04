@@ -45,12 +45,7 @@ public class WalkInRegistrationActivity extends AppCompatActivity {
         binding.toolbar.setNavigationOnClickListener(v -> finishWithoutAnimation());
         binding.toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_logout) {
-                FirebaseAuth.getInstance().signOut();
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                overridePendingTransition(0, 0);
-                finishWithoutAnimation();
+                LogoutUtils.showLogoutConfirmation(this);
                 return true;
             }
             return false;
@@ -73,9 +68,6 @@ public class WalkInRegistrationActivity extends AppCompatActivity {
                 Intent intent = new Intent(this, AdminAuditActivity.class);
                 intent.putExtra(AdminAuditActivity.EXTRA_SHOW_GUARD_NAV, true);
                 startGuardPortalActivity(intent, true);
-                return true;
-            } else if (id == R.id.nav_settings) {
-                Toast.makeText(this, "Settings coming soon", Toast.LENGTH_SHORT).show();
                 return true;
             }
             return false;

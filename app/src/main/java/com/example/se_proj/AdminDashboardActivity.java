@@ -66,13 +66,10 @@ public class AdminDashboardActivity extends AppCompatActivity {
         blacklistService = new BlacklistService(db);
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
+        LogoutUtils.attachLogoutConfirmation(this, binding.adminLogoutButton);
         binding.toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_logout) {
-                FirebaseAuth.getInstance().signOut();
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
+                LogoutUtils.showLogoutConfirmation(this);
                 return true;
             }
             return false;

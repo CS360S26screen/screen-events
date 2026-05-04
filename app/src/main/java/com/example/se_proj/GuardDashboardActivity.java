@@ -832,15 +832,10 @@ public class GuardDashboardActivity extends AppCompatActivity {
     }
 
     private void setupToolbar() {
+        LogoutUtils.attachLogoutConfirmation(this, binding.guardLogoutButton);
         binding.toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_logout) {
-                FirebaseAuth.getInstance().signOut();
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                overridePendingTransition(0, 0);
-                finish();
-                overridePendingTransition(0, 0);
+                LogoutUtils.showLogoutConfirmation(this);
                 return true;
             }
             return false;
@@ -880,9 +875,6 @@ public class GuardDashboardActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.nav_adhoc) {
                 startGuardPortalActivity(new Intent(this, WalkInRegistrationActivity.class), false);
-                return true;
-            } else if (id == R.id.nav_settings) {
-                Toast.makeText(this, "Settings coming soon", Toast.LENGTH_SHORT).show();
                 return true;
             }
             return false;

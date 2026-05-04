@@ -100,9 +100,6 @@ public class MainParkingActivity extends AppCompatActivity {
             } else if (id == R.id.nav_adhoc) {
                 startGuardPortalActivity(new Intent(this, WalkInRegistrationActivity.class), false);
                 return true;
-            } else if (id == R.id.nav_settings) {
-                Toast.makeText(this, "Settings not available yet", Toast.LENGTH_SHORT).show();
-                return true;
             }
             return false;
         });

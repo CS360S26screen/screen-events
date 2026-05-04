@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * Manages high-priority guard alerts (US20).
  *
- * <p>Responsibilities:</p>
+ * <p>Responsibilities:</p>///
  * <ul>
  *   <li>Write an {@link Alert} document to Firestore whenever a blacklisted entity is scanned
  *       or a delivery rider overstays — so ALL guards on duty see the alert in real time.</li>

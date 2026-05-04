@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -19,7 +18,6 @@ import com.example.se_proj.models.ZoneAccessLog;
 import com.example.se_proj.rules.AuditLogUtils;
 import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.Timestamp;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
@@ -72,12 +70,7 @@ public class AdminAuditActivity extends AppCompatActivity {
         binding.toolbar.setNavigationOnClickListener(v -> finishWithoutAnimation());
         binding.toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_logout) {
-                FirebaseAuth.getInstance().signOut();
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                overridePendingTransition(0, 0);
-                finishWithoutAnimation();
+                LogoutUtils.showLogoutConfirmation(this);
                 return true;
             }
             return false;
@@ -131,9 +124,6 @@ public class AdminAuditActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.nav_adhoc) {
                 startGuardPortalActivity(new Intent(this, WalkInRegistrationActivity.class), true);
-                return true;
-            } else if (id == R.id.nav_settings) {
-                Toast.makeText(this, "Settings coming soon", Toast.LENGTH_SHORT).show();
                 return true;
             }
             return false;
