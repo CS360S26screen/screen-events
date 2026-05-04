@@ -18,6 +18,17 @@ import com.google.firebase.firestore.ListenerRegistration;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Admin screen for viewing and soft-removing active blacklist entries.
+ *
+ * <p>Role in app: subscribes to active entries in Firestore, presents them through
+ * {@link BlacklistEntryAdapter}, and delegates removal operations to
+ * {@link BlacklistService}.</p>
+ *
+ * <p><b>Design pattern:</b> MVC-style Android controller. The Activity coordinates
+ * UI events, adapter updates, and service calls while keeping blacklist persistence
+ * in the service layer.</p>
+ */
 public class AdminBlacklistActivity extends AppCompatActivity {
 
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();

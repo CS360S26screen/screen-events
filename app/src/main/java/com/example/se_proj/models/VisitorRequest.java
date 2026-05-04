@@ -31,6 +31,10 @@ import java.util.Objects;
  * The temporal fields ({@code visitDate}, {@code startTime}, {@code endTime},
  * {@code entryTime}, {@code exitTime}) are currently string-based and should migrate to
  * structured timestamp/date types for stronger validation and query safety.
+ *
+ * <p><b>Design pattern:</b> Data Transfer Object (DTO) / Firestore document model.
+ * The class stores structured data for Firebase serialization while keeping
+ * business decisions in the rules and service layers.</p>
  */
 public class VisitorRequest {
 
@@ -135,44 +139,163 @@ public class VisitorRequest {
     // Getters
     // -------------------------------------------------------------------------
 
+    /**
+     * Returns the request id.
+     * @return the current request id
+     */
     public String getRequestId() { return requestId; }
+    /**
+     * Returns the guest name.
+     * @return the current guest name
+     */
     public String getGuestName() { return guestName; }
+    /**
+     * Returns the visitor CNIC.
+     *
+     * @return the current visitor CNIC.
+     */
     public String getGuestCNIC() { return guestCNIC; }
+    /**
+     * Returns the purpose.
+     * @return the current purpose
+     */
     public String getPurpose() { return purpose; }
+    /**
+     * Returns the visit date.
+     * @return the current visit date
+     */
     public String getVisitDate() { return visitDate; }
+    /**
+     * Returns the start time.
+     * @return the current start time
+     */
     public String getStartTime() { return startTime; }
+    /**
+     * Returns the end time.
+     * @return the current end time
+     */
     public String getEndTime() { return endTime; }
+    /**
+     * Returns the host id.
+     * @return the current host id
+     */
     public String getHostId() { return hostId; }
+    /**
+     * Returns the creator id.
+     * @return the current creator id
+     */
     public String getCreatorId() { return creatorId; }
+    /**
+     * Returns the host type.
+     * @return the current host type
+     */
     public String getHostType() { return hostType; }
+    /**
+     * Returns the status.
+     * @return the current status
+     */
     public String getStatus() { return status; }
+    /**
+     * Returns the entry time.
+     * @return the current entry time
+     */
     public String getEntryTime() { return entryTime; }
+    /**
+     * Returns the exit time.
+     * @return the current exit time
+     */
     public String getExitTime() { return exitTime; }
+    /**
+     * Returns whether the visitor is currently on campus.
+     *
+     * @return {@code true} while the visitor is checked in and has not exited.
+     */
     public boolean isOnCampus() { return onCampus; }
 
     // -------------------------------------------------------------------------
     // Setters (required for Firestore deserialization)
     // -------------------------------------------------------------------------
 
+    /**
+     * Sets the request id.
+     * @param requestId the value to assign to {@code requestId}
+     */
     public void setRequestId(String requestId) { this.requestId = requestId; }
+    /**
+     * Sets the guest name.
+     * @param guestName the value to assign to {@code guestName}
+     */
     public void setGuestName(String guestName) { this.guestName = guestName; }
+    /**
+     * Sets the guest cnic.
+     * @param guestCNIC the value to assign to {@code guestCNIC}
+     */
     public void setGuestCNIC(String guestCNIC) { this.guestCNIC = guestCNIC; }
+    /**
+     * Sets the purpose.
+     * @param purpose the value to assign to {@code purpose}
+     */
     public void setPurpose(String purpose) { this.purpose = purpose; }
+    /**
+     * Sets the visit date.
+     * @param visitDate the value to assign to {@code visitDate}
+     */
     public void setVisitDate(String visitDate) { this.visitDate = visitDate; }
+    /**
+     * Sets the start time.
+     * @param startTime the value to assign to {@code startTime}
+     */
     public void setStartTime(String startTime) { this.startTime = startTime; }
+    /**
+     * Sets the end time.
+     * @param endTime the value to assign to {@code endTime}
+     */
     public void setEndTime(String endTime) { this.endTime = endTime; }
+    /**
+     * Sets the host id.
+     * @param hostId the value to assign to {@code hostId}
+     */
     public void setHostId(String hostId) { this.hostId = hostId; }
+    /**
+     * Sets the creator id.
+     * @param creatorId the value to assign to {@code creatorId}
+     */
     public void setCreatorId(String creatorId) { this.creatorId = creatorId; }
+    /**
+     * Sets the host type.
+     * @param hostType the value to assign to {@code hostType}
+     */
     public void setHostType(String hostType) { this.hostType = hostType; }
+    /**
+     * Sets the status.
+     * @param status the value to assign to {@code status}
+     */
     public void setStatus(String status) { this.status = status; }
+    /**
+     * Sets the entry time.
+     * @param entryTime the value to assign to {@code entryTime}
+     */
     public void setEntryTime(String entryTime) { this.entryTime = entryTime; }
+    /**
+     * Sets the exit time.
+     * @param exitTime the value to assign to {@code exitTime}
+     */
     public void setExitTime(String exitTime) { this.exitTime = exitTime; }
+    /**
+     * Sets the on campus.
+     * @param onCampus the value to assign to {@code onCampus}
+     */
     public void setOnCampus(boolean onCampus) { this.onCampus = onCampus; }
 
     // -------------------------------------------------------------------------
     // equals / hashCode / toString
     // -------------------------------------------------------------------------
 
+    /**
+     * Compares this model with another object for value equality.
+     * @param o the object to compare with this instance
+     * @return {@code true} when the supplied object represents the same model data
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -194,6 +317,10 @@ public class VisitorRequest {
                 && Objects.equals(exitTime, that.exitTime);
     }
 
+    /**
+     * Computes the hash code for the identifying fields of this model.
+     * @return the hash code for this model
+     */
     @Override
     public int hashCode() {
         return Objects.hash(requestId, guestName, guestCNIC, purpose, visitDate,
@@ -201,6 +328,10 @@ public class VisitorRequest {
                 entryTime, exitTime, onCampus);
     }
 
+    /**
+     * Returns a concise diagnostic string for this model.
+     * @return a readable summary of this model
+     */
     @Override
     public String toString() {
         return "VisitorRequest{" +

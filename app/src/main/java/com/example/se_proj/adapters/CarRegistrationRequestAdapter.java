@@ -20,6 +20,10 @@ import java.util.List;
  *
  * <p>Displays the license plate, car model, owner name/roll, and role chip.
  * Approve and Reject callbacks are delegated to the host Activity.</p>
+ *
+ * <p><b>Design pattern:</b> RecyclerView Adapter/ViewHolder.
+ * The adapter maps domain models to row views and delegates user actions
+ * back to the owning Activity through callback interfaces.</p>
  */
 public class CarRegistrationRequestAdapter
         extends RecyclerView.Adapter<CarRegistrationRequestAdapter.ViewHolder> {
@@ -37,7 +41,12 @@ public class CarRegistrationRequestAdapter
     private List<CarRegistrationRequest> requests;
     private final OnApproveClickListener onApprove;
     private final OnRejectClickListener onReject;
-
+    /**
+     * Creates a new adapter component instance.
+     * @param requests the initial data set to display
+     * @param onApprove the value for {@code onApprove}
+     * @param onReject the value for {@code onReject}
+     */
     public CarRegistrationRequestAdapter(List<CarRegistrationRequest> requests,
                                          OnApproveClickListener onApprove,
                                          OnRejectClickListener onReject) {
@@ -53,7 +62,10 @@ public class CarRegistrationRequestAdapter
         final Chip chipOwnerRole;
         final MaterialButton btnApproveCarRequest;
         final MaterialButton btnRejectCarRequest;
-
+        /**
+         * Creates a new adapter component instance.
+         * @param view the value for {@code view}
+         */
         public ViewHolder(@NonNull View view) {
             super(view);
             tvAdminCarPlate = view.findViewById(R.id.tvAdminCarPlate);
@@ -64,7 +76,12 @@ public class CarRegistrationRequestAdapter
             btnRejectCarRequest = view.findViewById(R.id.btnRejectCarRequest);
         }
     }
-
+    /**
+     * Inflates a row layout and creates its ViewHolder.
+     * @param parent the parent view group used to inflate the row layout
+     * @param viewType the RecyclerView view type for the requested row
+     * @return a ViewHolder for the inflated row view
+     */
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -72,7 +89,11 @@ public class CarRegistrationRequestAdapter
                 .inflate(R.layout.item_car_reg_request_admin, parent, false);
         return new ViewHolder(view);
     }
-
+    /**
+     * Binds the model at the given position into the supplied ViewHolder.
+     * @param holder the ViewHolder whose views should be populated
+     * @param position the adapter position to bind
+     */
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         CarRegistrationRequest req = requests.get(position);
@@ -83,12 +104,18 @@ public class CarRegistrationRequestAdapter
         holder.btnApproveCarRequest.setOnClickListener(v -> onApprove.onApprove(req));
         holder.btnRejectCarRequest.setOnClickListener(v -> onReject.onReject(req));
     }
-
+    /**
+     * Returns the number of rows currently managed by this adapter.
+     * @return the current number of rows
+     */
     @Override
     public int getItemCount() {
         return requests.size();
     }
-
+    /**
+     * Replaces the adapter data set and refreshes the visible list.
+     * @param newRequests the replacement data set to display
+     */
     public void updateData(List<CarRegistrationRequest> newRequests) {
         requests = newRequests;
         notifyDataSetChanged();

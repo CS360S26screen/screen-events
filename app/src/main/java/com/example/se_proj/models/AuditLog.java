@@ -18,6 +18,10 @@ import java.util.Objects;
  * <h3>Outstanding Issues</h3>
  * The {@code action} field is still free-form text; replacing it with a constrained enum or
  * sealed hierarchy would reduce typo-driven filtering/reporting bugs.
+ *
+ * <p><b>Design pattern:</b> Data Transfer Object (DTO) / Firestore document model.
+ * The class stores structured data for Firebase serialization while keeping
+ * business decisions in the rules and service layers.</p>
  */
 public class AuditLog {
 
@@ -83,32 +87,102 @@ public class AuditLog {
     // Getters
     // -------------------------------------------------------------------------
 
+    /**
+     * Returns the Firestore document ID for this audit log.
+     *
+     * @return the current audit log document ID.
+     */
     public String getId() { return id; }
+    /**
+     * Returns the visitor name.
+     * @return the current visitor name
+     */
     public String getVisitorName() { return visitorName; }
+    /**
+     * Returns the visitor cnic.
+     * @return the current visitor cnic
+     */
     public String getVisitorCNIC() { return visitorCNIC; }
+    /**
+     * Returns the host id.
+     * @return the current host id
+     */
     public String getHostId() { return hostId; }
+    /**
+     * Returns the action.
+     * @return the current action
+     */
     public String getAction() { return action; }
+    /**
+     * Returns the reason.
+     * @return the current reason
+     */
     public String getReason() { return reason; }
+    /**
+     * Returns the creator id.
+     * @return the current creator id
+     */
     public String getCreatorId() { return creatorId; }
+    /**
+     * Returns the timestamp.
+     * @return the current timestamp
+     */
     public Timestamp getTimestamp() { return timestamp; }
 
     // -------------------------------------------------------------------------
     // Setters (required for Firestore deserialization)
     // -------------------------------------------------------------------------
 
+    /**
+     * Sets the id.
+     * @param id the value to assign to {@code id}
+     */
     public void setId(String id) { this.id = id; }
+    /**
+     * Sets the visitor name.
+     * @param visitorName the value to assign to {@code visitorName}
+     */
     public void setVisitorName(String visitorName) { this.visitorName = visitorName; }
+    /**
+     * Sets the visitor cnic.
+     * @param visitorCNIC the value to assign to {@code visitorCNIC}
+     */
     public void setVisitorCNIC(String visitorCNIC) { this.visitorCNIC = visitorCNIC; }
+    /**
+     * Sets the host id.
+     * @param hostId the value to assign to {@code hostId}
+     */
     public void setHostId(String hostId) { this.hostId = hostId; }
+    /**
+     * Sets the action.
+     * @param action the value to assign to {@code action}
+     */
     public void setAction(String action) { this.action = action; }
+    /**
+     * Sets the reason.
+     * @param reason the value to assign to {@code reason}
+     */
     public void setReason(String reason) { this.reason = reason; }
+    /**
+     * Sets the creator id.
+     * @param creatorId the value to assign to {@code creatorId}
+     */
     public void setCreatorId(String creatorId) { this.creatorId = creatorId; }
+    /**
+     * Sets the timestamp.
+     * @param timestamp the value to assign to {@code timestamp}
+     */
     public void setTimestamp(Timestamp timestamp) { this.timestamp = timestamp; }
 
     // -------------------------------------------------------------------------
     // equals / hashCode / toString
     // -------------------------------------------------------------------------
 
+    /**
+     * Compares this model with another object for value equality.
+     * @param o the object to compare with this instance
+     * @return {@code true} when the supplied object represents the same model data
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -124,11 +198,19 @@ public class AuditLog {
                 && Objects.equals(timestamp, that.timestamp);
     }
 
+    /**
+     * Computes the hash code for the identifying fields of this model.
+     * @return the hash code for this model
+     */
     @Override
     public int hashCode() {
         return Objects.hash(id, visitorName, visitorCNIC, hostId, action, reason, creatorId, timestamp);
     }
 
+    /**
+     * Returns a concise diagnostic string for this model.
+     * @return a readable summary of this model
+     */
     @Override
     public String toString() {
         return "AuditLog{" +

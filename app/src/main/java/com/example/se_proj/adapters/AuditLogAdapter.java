@@ -23,6 +23,10 @@ import java.util.List;
  *
  * <p>Outstanding issues: hard-coded color values should be replaced with theme resources to
  * support dark mode and centralized design tokens.</p>
+ *
+ * <p><b>Design pattern:</b> RecyclerView Adapter/ViewHolder.
+ * The adapter maps domain models to row views and delegates user actions
+ * back to the owning Activity through callback interfaces.</p>
  */
 public class AuditLogAdapter extends RecyclerView.Adapter<AuditLogAdapter.ViewHolder> {
 
@@ -41,13 +45,21 @@ public class AuditLogAdapter extends RecyclerView.Adapter<AuditLogAdapter.ViewHo
     /** ViewHolder containing view-binding references for a single audit-log card. */
     public static class ViewHolder extends RecyclerView.ViewHolder {
         final ItemAuditLogBinding binding;
-
+        /**
+         * Creates a new adapter component instance.
+         * @param binding the value for {@code binding}
+         */
         public ViewHolder(@NonNull ItemAuditLogBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }
     }
-
+    /**
+     * Inflates a row layout and creates its ViewHolder.
+     * @param parent the parent view group used to inflate the row layout
+     * @param viewType the RecyclerView view type for the requested row
+     * @return a ViewHolder for the inflated row view
+     */
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -55,7 +67,11 @@ public class AuditLogAdapter extends RecyclerView.Adapter<AuditLogAdapter.ViewHo
                 .inflate(LayoutInflater.from(parent.getContext()), parent, false);
         return new ViewHolder(binding);
     }
-
+    /**
+     * Binds the model at the given position into the supplied ViewHolder.
+     * @param holder the ViewHolder whose views should be populated
+     * @param position the adapter position to bind
+     */
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         AuditLog log = logs.get(position);
@@ -86,7 +102,10 @@ public class AuditLogAdapter extends RecyclerView.Adapter<AuditLogAdapter.ViewHo
             card.setCardBackgroundColor(Color.WHITE);
         }
     }
-
+    /**
+     * Returns the number of rows currently managed by this adapter.
+     * @return the current number of rows
+     */
     @Override
     public int getItemCount() {
         return logs.size();

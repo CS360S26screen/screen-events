@@ -21,6 +21,10 @@ import java.util.List;
  *
  * <p>Outstanding issues: row updates are not diffed and all item buttons remain active during
  * in-flight writes, which can trigger duplicate taps.</p>
+ *
+ * <p><b>Design pattern:</b> RecyclerView Adapter/ViewHolder.
+ * The adapter maps domain models to row views and delegates user actions
+ * back to the owning Activity through callback interfaces.</p>
  */
 public class FacultyRequestAdapter extends RecyclerView.Adapter<FacultyRequestAdapter.ViewHolder> {
 
@@ -58,13 +62,21 @@ public class FacultyRequestAdapter extends RecyclerView.Adapter<FacultyRequestAd
     /** ViewHolder wrapping view-binding references for a single faculty request row. */
     public static class ViewHolder extends RecyclerView.ViewHolder {
         final ItemFacultyRequestBinding binding;
-
+        /**
+         * Creates a new adapter component instance.
+         * @param binding the value for {@code binding}
+         */
         public ViewHolder(@NonNull ItemFacultyRequestBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }
     }
-
+    /**
+     * Inflates a row layout and creates its ViewHolder.
+     * @param parent the parent view group used to inflate the row layout
+     * @param viewType the RecyclerView view type for the requested row
+     * @return a ViewHolder for the inflated row view
+     */
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -72,7 +84,11 @@ public class FacultyRequestAdapter extends RecyclerView.Adapter<FacultyRequestAd
                 .inflate(LayoutInflater.from(parent.getContext()), parent, false);
         return new ViewHolder(binding);
     }
-
+    /**
+     * Binds the model at the given position into the supplied ViewHolder.
+     * @param holder the ViewHolder whose views should be populated
+     * @param position the adapter position to bind
+     */
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         VisitorRequest request = requests.get(position);
@@ -83,7 +99,10 @@ public class FacultyRequestAdapter extends RecyclerView.Adapter<FacultyRequestAd
         holder.binding.btnEdit.setOnClickListener(v -> onEditClick.onEdit(request));
         holder.binding.btnCancel.setOnClickListener(v -> onCancelClick.onCancel(request));
     }
-
+    /**
+     * Returns the number of rows currently managed by this adapter.
+     * @return the current number of rows
+     */
     @Override
     public int getItemCount() {
         return requests.size();

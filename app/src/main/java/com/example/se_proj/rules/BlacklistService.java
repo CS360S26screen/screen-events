@@ -19,6 +19,12 @@ import java.util.Set;
 
 /**
  * Manages the real-time blacklist system (US19).
+ *
+ * <p>Role in app: encapsulates Firestore reads and writes for active blacklist entries,
+ * duplicate blacklist checks, soft removal, and temporary-ban cleanup.</p>
+ *
+ * <p><b>Design pattern:</b> Service layer. Activities delegate blacklist persistence and
+ * normalization rules to this class instead of embedding Firestore query details in UI code.</p>
  */
 public final class BlacklistService {
 
@@ -31,18 +37,50 @@ public final class BlacklistService {
     private static final String FIELD_BAN_TYPE  = "banType";
     private static final String FIELD_EXPIRY    = "expiryDate";
 
+    /**
+     * Callback contract for asynchronous blacklist lookup results.
+     */
     public interface BlacklistCheckCallback {
+        /**
+         * Receives the lookup result.
+         *
+         * @param isBlacklisted {@code true} when an active, non-expired entry was found.
+         * @param entry the matching blacklist entry, or {@code null} when none exists.
+         */
         void onResult(boolean isBlacklisted, BlacklistEntry entry);
+
+        /**
+         * Receives lookup failures from Firestore.
+         *
+         * @param e the failure raised by the lookup operation.
+         */
         void onError(Exception e);
     }
 
+    /**
+     * Callback contract for asynchronous blacklist write operations.
+     */
     public interface BlacklistWriteCallback {
+        /**
+         * Called when the write operation completes successfully.
+         */
         void onSuccess();
+
+        /**
+         * Called when the write operation fails.
+         *
+         * @param e the failure raised by the write operation.
+         */
         void onError(Exception e);
     }
 
     private final FirebaseFirestore db;
 
+    /**
+     * Creates a blacklist service backed by the supplied Firestore instance.
+     *
+     * @param db Firestore database used for blacklist queries and updates.
+     */
     public BlacklistService(FirebaseFirestore db) {
         this.db = db;
     }
@@ -50,6 +88,9 @@ public final class BlacklistService {
     /**
      * Checks whether an entity is blacklisted. 
      * Uses whereIn to handle variations like "FT454", "FT-454", and "FT - 454".
+     *
+     * @param entityId CNIC, vehicle plate, or other entity identifier to check.
+     * @return a task that resolves to the active matching entry, or {@code null} if not blacklisted.
      */
     public Task<BlacklistEntry> checkBlacklist(String entityId) {
         TaskCompletionSource<BlacklistEntry> source = new TaskCompletionSource<>();
@@ -92,12 +133,32 @@ public final class BlacklistService {
         return source.getTask();
     }
 
+    /**
+     * Checks whether an entity is blacklisted and reports the result through a callback.
+     *
+     * @param entityId CNIC, vehicle plate, or other entity identifier to check.
+     * @param callback callback that receives the lookup result or failure.
+     */
     public void checkBlacklist(String entityId, BlacklistCheckCallback callback) {
         checkBlacklist(entityId)
                 .addOnSuccessListener(entry -> callback.onResult(entry != null, entry))
                 .addOnFailureListener(callback::onError);
     }
 
+    /**
+     * Adds an entity to the blacklist after confirming that no active entry already exists.
+     *
+     * @param entityId CNIC, vehicle plate, or other identifier to blacklist.
+     * @param entityType entity category, such as {@link BlacklistEntry#TYPE_PERSON} or
+     *                   {@link BlacklistEntry#TYPE_VEHICLE}.
+     * @param entityName display name or description for the entity.
+     * @param reason reason the entity is being blacklisted.
+     * @param banType ban duration type, such as {@link BlacklistEntry#BAN_PERMANENT} or
+     *                {@link BlacklistEntry#BAN_TEMPORARY}.
+     * @param expiryDate expiry timestamp for temporary bans, or {@code null} for permanent bans.
+     * @param addedBy Firebase Auth UID of the admin adding the entry.
+     * @param callback callback that receives success or validation/write failure.
+     */
     public void addToBlacklist(String entityId, String entityType, String entityName,
                                 String reason, String banType, Timestamp expiryDate,
                                 String addedBy, BlacklistWriteCallback callback) {
@@ -118,6 +179,12 @@ public final class BlacklistService {
         });
     }
 
+    /**
+     * Soft-removes a blacklist entry by setting its Firestore {@code active} field to false.
+     *
+     * @param entryId Firestore document ID of the blacklist entry.
+     * @param callback callback that receives success or update failure.
+     */
     public void removeFromBlacklist(String entryId, BlacklistWriteCallback callback) {
         db.collection(COLLECTION).document(entryId)
                 .update(FIELD_IS_ACTIVE, false)
