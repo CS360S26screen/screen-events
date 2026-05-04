@@ -12,12 +12,14 @@
         android:layout_height="wrap_content"
         android:background="@color/campus_blue_primary"
         app:elevation="0dp"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:liftOnScroll="false"
+        android:stateListAnimator="@null">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="86dp"
+            android:layout_height="91dp"
             app:title="Campus Hub"
             app:titleCentered="true"
             app:titleTextColor="@color/white">
@@ -84,7 +86,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                app:cardBackgroundColor="@color/white"
+                android:backgroundTint="#FFFFFF"
+                app:cardBackgroundColor="#FFFFFF"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="2dp"
                 app:strokeColor="#ECEFF4"
@@ -93,6 +96,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="#FFFFFF"
                     android:orientation="vertical"
                     android:padding="22dp">
 
@@ -112,7 +116,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:hint="e.g. ABC-1234"
-                        app:boxBackgroundColor="#FAFBFD"
+                        app:boxBackgroundColor="#FFFFFF"
                         app:boxCornerRadiusBottomEnd="14dp"
                         app:boxCornerRadiusBottomStart="14dp"
                         app:boxCornerRadiusTopEnd="14dp"
@@ -148,7 +152,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:hint="e.g. Honda Civic 2019"
-                        app:boxBackgroundColor="#FAFBFD"
+                        app:boxBackgroundColor="#FFFFFF"
                         app:boxCornerRadiusBottomEnd="14dp"
                         app:boxCornerRadiusBottomStart="14dp"
                         app:boxCornerRadiusTopEnd="14dp"

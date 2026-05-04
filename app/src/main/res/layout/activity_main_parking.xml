@@ -16,12 +16,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/campus_blue_primary"
-            app:elevation="0dp">
+            app:elevation="0dp"
+        app:liftOnScroll="false"
+        android:stateListAnimator="@null">
 
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="86dp"
+                android:layout_height="91dp"
                 app:navigationIcon="@drawable/ic_menu"
                 app:navigationIconTint="@color/white"
                 app:title="Main Parking"
@@ -46,7 +48,8 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="@color/primary_container"
+                    android:backgroundTint="#FFFFFF"
+                    app:cardBackgroundColor="#FFFFFF"
                     app:cardCornerRadius="24dp"
                     app:cardElevation="0dp"
                     app:strokeColor="@color/border_color"

@@ -144,14 +144,19 @@ public class RequestSubmissionActivity extends AppCompatActivity {
     }
 
     private void showGuestRegistration() {
-        binding.tvFacultyHeader.setText("Guest Registration");
+        binding.tvFacultyHeader.setText("Register New Guest");
         binding.tilGuestName.setVisibility(View.VISIBLE);
         binding.tilCnic.setVisibility(View.VISIBLE);
-        binding.tilPurpose.setVisibility(View.VISIBLE);
+        binding.tilPurpose.setVisibility(View.GONE);
+        if (binding.etPurpose.getText() != null && binding.etPurpose.getText().toString().trim().isEmpty()) {
+            binding.etPurpose.setText("Faculty guest pass");
+        }
         binding.tilVisitDate.setVisibility(View.VISIBLE);
         binding.llTimeSlots.setVisibility(View.VISIBLE);
+        binding.guestFormSpacer.setVisibility(View.VISIBLE);
         binding.btnSubmit.setVisibility(View.VISIBLE);
 
+        binding.cardFacultyCarRegistration.setVisibility(View.GONE);
         binding.tilFacultyCarPlate.setVisibility(View.GONE);
         binding.tilFacultyCarModel.setVisibility(View.GONE);
         binding.btnSubmitCarRequest.setVisibility(View.GONE);
@@ -164,8 +169,10 @@ public class RequestSubmissionActivity extends AppCompatActivity {
         binding.tilPurpose.setVisibility(View.GONE);
         binding.tilVisitDate.setVisibility(View.GONE);
         binding.llTimeSlots.setVisibility(View.GONE);
+        binding.guestFormSpacer.setVisibility(View.GONE);
         binding.btnSubmit.setVisibility(View.GONE);
 
+        binding.cardFacultyCarRegistration.setVisibility(View.VISIBLE);
         binding.tilFacultyCarPlate.setVisibility(View.VISIBLE);
         binding.tilFacultyCarModel.setVisibility(View.VISIBLE);
         binding.btnSubmitCarRequest.setVisibility(View.VISIBLE);

@@ -45,6 +45,8 @@ import java.util.List;
  */
 public class AdminAuditActivity extends AppCompatActivity {
 
+    public static final String EXTRA_SHOW_GUARD_NAV = "show_guard_nav";
+
     private static final int TAB_AUDIT    = 0;
     private static final int TAB_OVERSTAY = 1;
     private static final int TAB_ZONE     = 2;
@@ -87,7 +89,7 @@ public class AdminAuditActivity extends AppCompatActivity {
         setupRecyclerView();
         setupTabs();
         setupSearch();
-        setupBottomNavigation();
+        setupGuardBottomNavigation();
         fetchLogs();
     }
 
@@ -96,7 +98,29 @@ public class AdminAuditActivity extends AppCompatActivity {
         overridePendingTransition(0, 0);
     }
 
-    private void setupBottomNavigation() {
+    private void startGuardPortalActivity(Intent intent, boolean finishCurrent) {
+        startActivity(intent);
+        overridePendingTransition(0, 0);
+        if (finishCurrent) {
+            finishWithoutAnimation();
+        }
+    }
+
+    private void setupGuardBottomNavigation() {
+        boolean showGuardNav = getIntent().getBooleanExtra(EXTRA_SHOW_GUARD_NAV, false);
+        if (!showGuardNav) {
+            binding.bottomNavigation.setVisibility(View.GONE);
+            return;
+        }
+
+        binding.bottomNavigation.setVisibility(View.VISIBLE);
+        binding.rvAuditLogs.setClipToPadding(false);
+        binding.rvAuditLogs.setPadding(
+                binding.rvAuditLogs.getPaddingLeft(),
+                binding.rvAuditLogs.getPaddingTop(),
+                binding.rvAuditLogs.getPaddingRight(),
+                getResources().getDimensionPixelSize(R.dimen.guard_bottom_nav_content_padding)
+        );
         binding.bottomNavigation.setSelectedItemId(R.id.nav_logs);
         binding.bottomNavigation.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
@@ -114,14 +138,6 @@ public class AdminAuditActivity extends AppCompatActivity {
             }
             return false;
         });
-    }
-
-    private void startGuardPortalActivity(Intent intent, boolean finishCurrent) {
-        startActivity(intent);
-        overridePendingTransition(0, 0);
-        if (finishCurrent) {
-            finishWithoutAnimation();
-        }
     }
 
     @Override

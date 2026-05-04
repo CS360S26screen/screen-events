@@ -4,16 +4,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="16dp"
     android:layout_marginVertical="8dp"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="0dp"
-    app:strokeColor="@color/border_color"
+    android:backgroundTint="#FFFFFF"
+    app:cardBackgroundColor="#FFFFFF"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="1dp"
+    app:strokeColor="#ECEFF4"
     app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="#FFFFFF"
         android:orientation="vertical"
         android:padding="16dp">
 
@@ -28,8 +30,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:fontFamily="@font/inter_variablefont_opsz_wght"
                 android:textColor="@color/text_color_primary"
-                android:textSize="18sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 tools:text="John Doe" />
 
@@ -37,6 +40,7 @@
                 android:id="@+id/chipStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="@font/inter_variablefont_opsz_wght"
                 android:textColor="@color/status_approved_text"
                 app:chipBackgroundColor="@color/status_approved_bg"
                 app:chipStrokeWidth="0dp"
@@ -48,8 +52,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:fontFamily="@font/inter_variablefont_opsz_wght"
             android:textColor="@color/text_color_secondary"
-            android:textSize="14sp"
+            android:textSize="13sp"
             tools:text="25 Oct 2023 | 09:00 - 11:00" />
 
         <LinearLayout
@@ -64,7 +69,11 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Edit Time" />
+                android:fontFamily="@font/inter_variablefont_opsz_wght"
+                android:text="Edit Time"
+                android:textAllCaps="false"
+                app:backgroundTint="#EDE7FF"
+                app:cornerRadius="14dp" />
 
             <View
                 android:layout_width="12dp"
@@ -76,9 +85,12 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:fontFamily="@font/inter_variablefont_opsz_wght"
                 android:text="Cancel Pass"
+                android:textAllCaps="false"
                 android:textColor="@color/status_alert_red"
-                app:backgroundTint="#FFF0F0" />
+                app:backgroundTint="#FFF0F0"
+                app:cornerRadius="14dp" />
 
         </LinearLayout>
     </LinearLayout>

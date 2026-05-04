@@ -138,7 +138,7 @@ public class FacultyRequestsActivity extends AppCompatActivity {
 
     private void setupScreenLabels() {
         boolean approved = MODE_APPROVED.equals(filterMode);
-        binding.toolbar.setTitle(approved ? "Approved Requests" : "Pending Requests");
+        binding.toolbar.setTitle("Campus Hub");
         binding.tvGuestRequestsTitle.setText(approved
                 ? "Approved Guest Requests"
                 : "Pending Guest Requests");

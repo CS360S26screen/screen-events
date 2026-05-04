@@ -70,7 +70,9 @@ public class WalkInRegistrationActivity extends AppCompatActivity {
                 startGuardPortalActivity(new Intent(this, GuardDashboardActivity.class), true);
                 return true;
             } else if (id == R.id.nav_logs) {
-                startGuardPortalActivity(new Intent(this, AdminAuditActivity.class), true);
+                Intent intent = new Intent(this, AdminAuditActivity.class);
+                intent.putExtra(AdminAuditActivity.EXTRA_SHOW_GUARD_NAV, true);
+                startGuardPortalActivity(intent, true);
                 return true;
             } else if (id == R.id.nav_settings) {
                 Toast.makeText(this, "Settings coming soon", Toast.LENGTH_SHORT).show();

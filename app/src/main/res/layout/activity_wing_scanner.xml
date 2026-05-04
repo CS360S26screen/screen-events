@@ -13,12 +13,14 @@
         android:layout_height="wrap_content"
         android:background="@color/campus_blue_primary"
         app:elevation="0dp"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:liftOnScroll="false"
+        android:stateListAnimator="@null">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="86dp"
+            android:layout_height="91dp"
             app:navigationIcon="@drawable/ic_menu"
             app:navigationIconTint="@color/white"
             app:title="Wing Access Scanner"
@@ -115,7 +117,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
+                android:backgroundTint="#FFFFFF"
                 android:visibility="gone"
+                app:cardBackgroundColor="#FFFFFF"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp">
@@ -123,6 +127,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="#FFFFFF"
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="32dp">

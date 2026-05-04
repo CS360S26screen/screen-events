@@ -16,12 +16,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/campus_blue_primary"
-            app:elevation="0dp">
+            app:elevation="0dp"
+        app:liftOnScroll="false"
+        android:stateListAnimator="@null">
 
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="86dp"
+                android:layout_height="91dp"
                 app:title="Campus Hub"
                 app:titleCentered="true"
                 app:titleTextColor="@color/white">
@@ -64,7 +66,7 @@
 
                 <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="176dp"
+                    android:layout_height="184dp"
                     android:background="@drawable/bg_guard_summary_gradient"
                     android:elevation="8dp">
 
@@ -73,7 +75,7 @@
                         android:layout_height="match_parent"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:padding="26dp">
+                        android:padding="24dp">
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -117,12 +119,11 @@
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnViewParking"
                                 android:layout_width="wrap_content"
-                                android:layout_height="44dp"
-                                android:layout_marginTop="8dp"
+                                android:layout_height="50dp"
                                 android:backgroundTint="#33FFFFFF"
                                 android:minWidth="0dp"
                                 android:paddingHorizontal="18dp"
-                                android:text="View Parking  →"
+                                android:text="View Parking"
                                 android:textAllCaps="false"
                                 android:textColor="@color/white"
                                 android:textSize="14sp"
@@ -192,7 +193,7 @@
                         android:layout_height="50dp"
                         android:layout_weight="1"
                         android:background="@android:color/transparent"
-                        android:drawableStart="@android:drawable/ic_menu_upload"
+                        android:drawableStart="@drawable/my_guests"
                         android:drawablePadding="8dp"
                         android:gravity="center"
                         android:text="Guests"
@@ -227,7 +228,7 @@
                         android:textAllCaps="false"
                         android:textColor="#3D4A5C"
                         android:textSize="16sp"
-                        app:icon="@android:drawable/ic_menu_directions"
+                        app:icon="@drawable/car_icon"
                         app:iconGravity="textStart"
                         app:iconTint="#3D4A5C" />
                     </LinearLayout>
@@ -238,7 +239,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="26dp"
-                    app:cardBackgroundColor="@color/white"
+                    android:backgroundTint="#FFFFFF"
+                    app:cardBackgroundColor="#FFFFFF"
                     app:cardCornerRadius="18dp"
                     app:cardElevation="2dp"
                     app:strokeColor="#ECEFF4"
@@ -247,6 +249,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="#FFFFFF"
                         android:orientation="vertical"
                         android:padding="20dp">
 
@@ -265,7 +268,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="16dp"
                             android:hint="Guest CNIC"
-                            app:boxBackgroundColor="#F6F1FC"
+                            app:boxBackgroundColor="#FFFFFF"
                             app:boxCornerRadiusBottomEnd="14dp"
                             app:boxCornerRadiusBottomStart="14dp"
                             app:boxCornerRadiusTopEnd="14dp"
@@ -303,7 +306,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
-                    app:cardBackgroundColor="@color/white"
+                    android:backgroundTint="#FFFFFF"
+                    app:cardBackgroundColor="#FFFFFF"
                     app:cardCornerRadius="18dp"
                     app:cardElevation="2dp"
                     app:strokeColor="#ECEFF4"
@@ -312,6 +316,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="#FFFFFF"
                         android:orientation="vertical"
                         android:padding="20dp">
 
@@ -330,7 +335,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="16dp"
                             android:hint="Host ID"
-                            app:boxBackgroundColor="#F6F1FC"
+                            app:boxBackgroundColor="#FFFFFF"
                             app:boxCornerRadiusBottomEnd="14dp"
                             app:boxCornerRadiusBottomStart="14dp"
                             app:boxCornerRadiusTopEnd="14dp"
@@ -369,7 +374,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="26dp"
                     android:visibility="gone"
-                    app:cardBackgroundColor="@color/white"
+                    android:backgroundTint="#FFFFFF"
+                    app:cardBackgroundColor="#FFFFFF"
                     app:cardCornerRadius="18dp"
                     app:cardElevation="2dp"
                     app:strokeColor="#ECEFF4"
@@ -378,6 +384,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="#FFFFFF"
                         android:orientation="vertical"
                         android:padding="20dp">
 
@@ -437,7 +444,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
+                    android:backgroundTint="#FFFFFF"
                     android:visibility="gone"
+                    app:cardBackgroundColor="#FFFFFF"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
                     app:strokeColor="@color/border_color"
@@ -446,6 +455,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="#FFFFFF"
                         android:orientation="vertical"
                         android:padding="20dp">
 
@@ -532,7 +542,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="26dp"
-                        app:cardBackgroundColor="@color/white"
+                        android:backgroundTint="#FFFFFF"
+                        app:cardBackgroundColor="#FFFFFF"
                         app:cardCornerRadius="18dp"
                         app:cardElevation="2dp"
                         app:strokeColor="#ECEFF4"
@@ -541,6 +552,7 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:background="#FFFFFF"
                             android:orientation="vertical"
                             android:padding="20dp">
 
@@ -559,7 +571,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="16dp"
                                 android:hint="License Plate"
-                                app:boxBackgroundColor="#F6F1FC"
+                                app:boxBackgroundColor="#FFFFFF"
                                 app:boxCornerRadiusBottomEnd="14dp"
                                 app:boxCornerRadiusBottomStart="14dp"
                                 app:boxCornerRadiusTopEnd="14dp"
@@ -596,7 +608,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
-                        app:cardBackgroundColor="@color/white"
+                        android:backgroundTint="#FFFFFF"
+                        app:cardBackgroundColor="#FFFFFF"
                         app:cardCornerRadius="18dp"
                         app:cardElevation="2dp"
                         app:strokeColor="#ECEFF4"
@@ -605,6 +618,7 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:background="#FFFFFF"
                             android:orientation="vertical"
                             android:padding="20dp">
 
@@ -623,7 +637,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="16dp"
                                 android:hint="License Plate"
-                                app:boxBackgroundColor="#F6F1FC"
+                                app:boxBackgroundColor="#FFFFFF"
                                 app:boxCornerRadiusBottomEnd="14dp"
                                 app:boxCornerRadiusBottomStart="14dp"
                                 app:boxCornerRadiusTopEnd="14dp"
