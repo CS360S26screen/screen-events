@@ -97,6 +97,22 @@ The full-point implementation keeps the halfway UML pattern: activities own scre
 `AdminAuditActivity` keeps using `AuditLogAdapter`. Zone and delivery records are projected into `AuditLog` rows so existing audit UI behavior stays aligned with `AuditLogUtils`, while the source records remain strongly typed as `ZoneAccessLog` and `DeliveryLog`.
 
 
+---
+
+## Final Checkpoint UML Diagrams
+**Domain Model / Firestore Documents**
+<img width="2411" height="633" alt="DomainModel-UML1" src="https://github.com/user-attachments/assets/8c2554d4-9f5f-4c42-bbe3-9bc9ecde5000" />
+**Rules and Service Layer**
+<img width="1099" height="358" alt="RULES:SERVICES-UML2" src="https://github.com/user-attachments/assets/f777dacc-3cfd-48aa-a7ee-baf6009aee14" />
+**Activity Controllers**
+<img width="1200" height="1149" alt="CONTROLLERS-UML3" src="https://github.com/user-attachments/assets/96ef6c1d-6684-4285-9e17-e11dfabadd72" />
+**RecyclerView Adapter Layer**
+<img width="1096" height="352" alt="Adapter-UML4(updated)" src="https://github.com/user-attachments/assets/416f75af-b1c1-4a8b-af95-d02f93b560f9" />
+
+
+
+
+
 
 
 
