@@ -58,6 +58,39 @@ service cloud.firestore {
       allow create: if request.auth != null && (isGuard(request.auth.uid) || isAdmin(request.auth.uid));
     }
 
+    // Pending car registration requests. Students/faculty submit; admins approve/reject.
+    match /car_registration_requests/{requestId} {
+      allow create: if request.auth != null &&
+                    (isStudent(request.auth.uid) || isFaculty(request.auth.uid)) &&
+                    request.resource.data.studentUid == request.auth.uid &&
+                    (
+                      (isStudent(request.auth.uid) && request.resource.data.ownerRole == 'student') ||
+                      (isFaculty(request.auth.uid) && request.resource.data.ownerRole == 'faculty')
+                    );
+
+      allow read: if request.auth != null;
+
+      allow update: if request.auth != null && isAdmin(request.auth.uid);
+
+      allow delete: if request.auth != null &&
+                    resource.data.studentUid == request.auth.uid &&
+                    resource.data.status == 'pending';
+    }
+
+    // Approved/registered vehicles. Guards update entry/exit state; admins create approvals.
+    match /cars_registered/{vehicleId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && isAdmin(request.auth.uid);
+      allow update: if request.auth != null && (isGuard(request.auth.uid) || isAdmin(request.auth.uid));
+      allow delete: if request.auth != null && isAdmin(request.auth.uid);
+    }
+
+    // Detailed zone/vehicle scan logs written by guards and read by admins.
+    match /zone_access_logs/{logId} {
+      allow read: if request.auth != null && isAdmin(request.auth.uid);
+      allow create: if request.auth != null && (isGuard(request.auth.uid) || isAdmin(request.auth.uid));
+    }
+
     // Rule for system_metadata (parking status etc.)
     // write (not just update) so guards can initialize the document if missing
     match /system_metadata/{docId} {

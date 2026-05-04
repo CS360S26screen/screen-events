@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="TextAppearance_Student_InterRegular">
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+
+    <style name="TextAppearance_Student_BottomNav" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+</resources>

@@ -24,6 +24,10 @@ import java.util.List;
  *
  * <p>Outstanding issues: uses {@code notifyDataSetChanged()} for all updates; consider DiffUtil
  * for smoother animations and lower bind cost on large lists.</p>
+ *
+ * <p><b>Design pattern:</b> RecyclerView Adapter/ViewHolder.
+ * The adapter maps domain models to row views and delegates user actions
+ * back to the owning Activity through callback interfaces.</p>
  */
 public class VisitorRequestAdapter extends RecyclerView.Adapter<VisitorRequestAdapter.ViewHolder> {
 
@@ -66,7 +70,10 @@ public class VisitorRequestAdapter extends RecyclerView.Adapter<VisitorRequestAd
         final TextView chipStatus;
         final Button btnApprove;
         final Button btnReject;
-
+        /**
+         * Creates a new adapter component instance.
+         * @param view the value for {@code view}
+         */
         public ViewHolder(@NonNull View view) {
             super(view);
             tvGuestName = view.findViewById(R.id.tvGuestName);
@@ -77,7 +84,12 @@ public class VisitorRequestAdapter extends RecyclerView.Adapter<VisitorRequestAd
             btnReject = view.findViewById(R.id.btnReject);
         }
     }
-
+    /**
+     * Inflates a row layout and creates its ViewHolder.
+     * @param parent the parent view group used to inflate the row layout
+     * @param viewType the RecyclerView view type for the requested row
+     * @return a ViewHolder for the inflated row view
+     */
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -85,7 +97,11 @@ public class VisitorRequestAdapter extends RecyclerView.Adapter<VisitorRequestAd
                 .inflate(R.layout.item_visitor_request, parent, false);
         return new ViewHolder(view);
     }
-
+    /**
+     * Binds the model at the given position into the supplied ViewHolder.
+     * @param holder the ViewHolder whose views should be populated
+     * @param position the adapter position to bind
+     */
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         VisitorRequest request = requests.get(position);
@@ -97,7 +113,10 @@ public class VisitorRequestAdapter extends RecyclerView.Adapter<VisitorRequestAd
         holder.btnApprove.setOnClickListener(v -> onApproveClick.onApprove(request));
         holder.btnReject.setOnClickListener(v -> onRejectClick.onReject(request));
     }
-
+    /**
+     * Returns the number of rows currently managed by this adapter.
+     * @return the current number of rows
+     */
     @Override
     public int getItemCount() {
         return requests.size();

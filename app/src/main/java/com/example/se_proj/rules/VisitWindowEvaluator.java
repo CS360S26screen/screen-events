@@ -53,7 +53,7 @@ public final class VisitWindowEvaluator {
             LocalDate currentDate,
             LocalTime currentTime
     ) {
-        if (request.getOnCampus()) {
+        if (request.isOnCampus()) {
             return new Decision(
                     VisitWindowState.INSIDE,
                     "INSIDE",
@@ -173,6 +173,17 @@ public final class VisitWindowEvaluator {
         private final boolean overrideVisible;
         private final String deniedReason;
 
+        /**
+         * Creates a complete gate-access decision.
+         *
+         * @param state normalized decision state.
+         * @param label short status label for the guard UI.
+         * @param message explanatory message shown to the guard.
+         * @param actionText text for the primary action button.
+         * @param actionEnabled whether the primary action should be enabled.
+         * @param overrideVisible whether the supervisor override action should be visible.
+         * @param deniedReason audit reason to record for denied attempts, or an empty string.
+         */
         public Decision(
                 VisitWindowState state,
                 String label,

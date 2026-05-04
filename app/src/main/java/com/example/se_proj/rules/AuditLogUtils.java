@@ -2,6 +2,7 @@ package com.example.se_proj.rules;
 
 import com.example.se_proj.models.AuditLog;
 import com.example.se_proj.models.VisitorRequest;
+import com.example.se_proj.models.ZoneAccessLog;
 import com.google.firebase.Timestamp;
 
 import java.time.LocalDate;
@@ -67,7 +68,7 @@ public final class AuditLogUtils {
      * @return whether the visitor is overstaying.
      */
     public static boolean isOverstaying(VisitorRequest request, LocalDateTime now) {
-        if (request == null || !request.getOnCampus()) {
+        if (request == null || !request.isOnCampus()) {
             return false;
         }
         LocalDateTime visitEnd = parseVisitEnd(request);
@@ -88,7 +89,7 @@ public final class AuditLogUtils {
             LocalDateTime now,
             long reminderMinutes
     ) {
-        if (request == null || !request.getOnCampus()) {
+        if (request == null || !request.isOnCampus()) {
             return false;
         }
         LocalDateTime visitEnd = parseVisitEnd(request);
@@ -116,6 +117,30 @@ public final class AuditLogUtils {
                 "Scheduled exit: " + request.getEndTime(),
                 request.getCreatorId(),
                 Timestamp.now()
+        );
+    }
+
+    /**
+     * Converts a structured zone-access attempt into the existing {@link AuditLog}
+     * projection used by the admin audit screen.
+     *
+     * <p>The zone ID is stored in {@code hostId} so the existing audit adapter can display
+     * the access location without needing a separate row layout.</p>
+     */
+    public static AuditLog toZoneAccessAuditLog(ZoneAccessLog zoneLog) {
+        if (zoneLog == null) {
+            return new AuditLog();
+        }
+        String reason = buildZoneAuditReason(zoneLog);
+        return new AuditLog(
+                "",
+                nullToEmpty(zoneLog.getEntityName()),
+                nullToEmpty(zoneLog.getEntityId()),
+                nullToEmpty(zoneLog.getZoneId()),
+                nullToEmpty(zoneLog.getAction()),
+                reason,
+                nullToEmpty(zoneLog.getGuardId()),
+                zoneLog.getTimestamp() != null ? zoneLog.getTimestamp() : Timestamp.now()
         );
     }
 
@@ -159,5 +184,23 @@ public final class AuditLogUtils {
         } catch (DateTimeParseException ignored) {
             return null;
         }
+    }
+
+    private static String buildZoneAuditReason(ZoneAccessLog zoneLog) {
+        String outcome = nullToEmpty(zoneLog.getOutcome());
+        String location = nullToEmpty(zoneLog.getZoneId());
+        String failureReason = nullToEmpty(zoneLog.getFailureReason());
+
+        if (ZoneAccessLog.OUTCOME_SUCCESS.equals(outcome)) {
+            return "Location: " + location;
+        }
+        if (!failureReason.isEmpty()) {
+            return failureReason + " | Location: " + location;
+        }
+        return outcome + " | Location: " + location;
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 }

@@ -71,6 +71,47 @@ The system interface is designed as a native Android application following **Mat
 
 <img width="1430" height="319" alt="UML2" src="https://github.com/user-attachments/assets/66093b96-7412-4ca2-9da9-13446f3bb329" />
 
+## Full-Point Extension for User Stories 18-21
+
+The full-point implementation keeps the halfway UML pattern: activities own screens and input events, models represent Firestore documents, and rule/service classes hold reusable security logic.
+
+| Story | Feature | Model class | Rule/service class | Firestore collection | Main UI connection |
+|---:|---|---|---|---|---|
+| 18 | Zone access logging | `ZoneAccessLog` | `ZoneAccessLogger` | `zone_access_logs`, mirrored to `access_logs` | `GuardDashboardActivity` writes every successful and failed scan; `AdminAuditActivity` displays the Zone Logs tab. |
+| 19 | Blacklist management | `BlacklistEntry` | `BlacklistService` | `blacklist` | `AdminDashboardActivity` opens Manage Blacklist dialogs to add, expire, and deactivate entries. |
+| 20 | Guard visual alerts | `Alert` | `AlertManager` | `alerts` | `GuardDashboardActivity` listens for unacknowledged high-priority alerts and blocks blacklisted scans. |
+| 21 | Delivery lifecycle tracking | `DeliveryLog` | `DeliveryTrackingService` | `delivery_logs` | `GuardDashboardActivity` records rider, company, vehicle, destination, and receiving host/faculty details at entry; `AdminAuditActivity` displays Delivery Logs. |
+
+### Class Connections
+
+`GuardDashboardActivity` now coordinates gate actions:
+
+1. CNIC scan goes through `BlacklistService.checkBlacklist`.
+2. A blacklist hit calls `AlertManager.triggerHighPriorityAlert`, blocks access, and records a denied `ZoneAccessLog`.
+3. A normal visitor lookup continues through the existing `VisitorRequest` flow and still writes `AuditLog` records for admin review.
+4. Check-in, check-out, override, expired window, and missing approval outcomes are also written by `ZoneAccessLogger`.
+5. Delivery Entry and Delivery Exit buttons delegate to `DeliveryTrackingService`, which creates or closes `DeliveryLog` records and flags riders over the allowed duration.
+
+`AdminDashboardActivity` remains the request approval hub, with an added Manage Blacklist control. It delegates blacklist add/remove/expiry behavior to `BlacklistService` instead of embedding Firestore rules in the screen.
+
+`AdminAuditActivity` keeps using `AuditLogAdapter`. Zone and delivery records are projected into `AuditLog` rows so existing audit UI behavior stays aligned with `AuditLogUtils`, while the source records remain strongly typed as `ZoneAccessLog` and `DeliveryLog`.
+
+
+---
+
+## Final Checkpoint UML Diagrams
+**Domain Model / Firestore Documents**
+<img width="2411" height="633" alt="DomainModel-UML1" src="https://github.com/user-attachments/assets/8c2554d4-9f5f-4c42-bbe3-9bc9ecde5000" />
+**Rules and Service Layer**
+<img width="1099" height="358" alt="RULES:SERVICES-UML2" src="https://github.com/user-attachments/assets/f777dacc-3cfd-48aa-a7ee-baf6009aee14" />
+**Activity Controllers**
+<img width="1200" height="1149" alt="CONTROLLERS-UML3" src="https://github.com/user-attachments/assets/96ef6c1d-6684-4285-9e17-e11dfabadd72" />
+**RecyclerView Adapter Layer**
+<img width="1096" height="352" alt="Adapter-UML4(updated)" src="https://github.com/user-attachments/assets/416f75af-b1c1-4a8b-af95-d02f93b560f9" />
+
+
+
+
 
 
 

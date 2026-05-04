@@ -228,7 +228,7 @@ public final class RequestValidationUtils {
         for (VisitorRequest request : requests) {
             if (request == null) continue;
             String status = RequestStatus.normalize(request.getStatus());
-            if (request.getOnCampus()
+            if (request.isOnCampus()
                     || RequestStatus.PENDING.equals(status)
                     || RequestStatus.PENDING_ADHOC.equals(status)) {
                 return true;

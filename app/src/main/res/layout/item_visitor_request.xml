@@ -6,6 +6,8 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
     android:layout_marginVertical="8dp"
+    android:backgroundTint="#FFFFFF"
+    app:cardBackgroundColor="#FFFFFF"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/border_color"

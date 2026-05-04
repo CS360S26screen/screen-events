@@ -33,6 +33,26 @@ public final class UserProfileUtils {
         return fallbackId == null ? "" : fallbackId.trim();
     }
 
+    /**
+     * Returns the best host identifier, using the email local-part before falling back
+     * to the document ID. This handles UID-keyed profile documents that do not store
+     * an explicit rollNumber/facultyId field.
+     */
+    public static String resolveHostId(String rollNumber, String facultyId,
+                                       String fallbackId, String email) {
+        String resolved = resolveHostId(rollNumber, facultyId, "");
+        if (isNotBlank(resolved)) {
+            return resolved;
+        }
+        if (isNotBlank(email) && email.contains("@")) {
+            String localPart = email.substring(0, email.indexOf('@')).trim();
+            if (!localPart.isEmpty()) {
+                return localPart;
+            }
+        }
+        return fallbackId == null ? "" : fallbackId.trim();
+    }
+
     private static boolean isNotBlank(String value) {
         return value != null && !value.trim().isEmpty();
     }

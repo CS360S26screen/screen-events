@@ -5,19 +5,24 @@ import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.se_proj.databinding.ActivityRequestSubmissionBinding;
+import com.example.se_proj.models.CarRegistrationRequest;
 import com.example.se_proj.models.VisitorRequest;
 import com.example.se_proj.rules.AuditLogUtils;
 import com.example.se_proj.rules.RequestStatus;
 import com.example.se_proj.rules.RequestValidationUtils;
 import com.example.se_proj.rules.UserProfileUtils;
+import com.example.se_proj.rules.VehicleRegistrationUtils;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentChange;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
@@ -39,6 +44,10 @@ import java.util.Set;
  * and resets on process death, so reminders can reappear after app restart.</p>
  */
 public class RequestSubmissionActivity extends AppCompatActivity {
+
+    public static final String EXTRA_MODE = "faculty_portal_mode";
+    public static final String MODE_GUEST = "guest";
+    public static final String MODE_CAR = "car";
 
     /** Callback interface for time-picker dialogs. */
     private interface OnTimeSelectedListener {
@@ -66,20 +75,19 @@ public class RequestSubmissionActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         binding.toolbar.setNavigationOnClickListener(v -> finish());
+        LogoutUtils.attachLogoutConfirmation(this, binding.facultySubmissionLogoutButton);
         binding.toolbar.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_logout) {
-                FirebaseAuth.getInstance().signOut();
-                Intent intent = new Intent(this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
+                LogoutUtils.showLogoutConfirmation(this);
                 return true;
             }
             return false;
         });
 
         binding.btnSubmit.setEnabled(false);
+        binding.btnSubmitCarRequest.setEnabled(false);
         loadUserProfile();
+        setupBottomNavigation();
 
         binding.etVisitDate.setOnClickListener(v -> showDatePicker());
         binding.etStartTime.setOnClickListener(v ->
@@ -94,9 +102,77 @@ public class RequestSubmissionActivity extends AppCompatActivity {
                 }));
 
         binding.btnSubmit.setOnClickListener(v -> submitRequest());
+        binding.btnSubmitCarRequest.setOnClickListener(v -> submitCarRequest());
 
-        binding.btnViewRequests.setOnClickListener(v ->
-                startActivity(new Intent(this, FacultyRequestsActivity.class)));
+        String mode = getIntent().getStringExtra(EXTRA_MODE);
+        if (MODE_CAR.equals(mode)) {
+            binding.bottomNavigation.setSelectedItemId(R.id.nav_faculty_car);
+        } else {
+            binding.bottomNavigation.setSelectedItemId(R.id.nav_faculty_guest);
+        }
+    }
+
+    private void setupBottomNavigation() {
+        binding.bottomNavigation.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_faculty_guest) {
+                showGuestRegistration();
+                return true;
+            } else if (id == R.id.nav_faculty_car) {
+                showCarRegistration();
+                return true;
+            } else if (id == R.id.nav_faculty_approved) {
+                Intent intent = new Intent(this, FacultyRequestsActivity.class);
+                intent.putExtra(FacultyRequestsActivity.EXTRA_FILTER_MODE,
+                        FacultyRequestsActivity.MODE_APPROVED);
+                startActivity(intent);
+                finish();
+                return true;
+            } else if (id == R.id.nav_faculty_pending) {
+                Intent intent = new Intent(this, FacultyRequestsActivity.class);
+                intent.putExtra(FacultyRequestsActivity.EXTRA_FILTER_MODE,
+                        FacultyRequestsActivity.MODE_PENDING);
+                startActivity(intent);
+                finish();
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void showGuestRegistration() {
+        binding.tvFacultyHeader.setText("Register New Guest");
+        binding.tilGuestName.setVisibility(View.VISIBLE);
+        binding.tilCnic.setVisibility(View.VISIBLE);
+        binding.tilPurpose.setVisibility(View.GONE);
+        if (binding.etPurpose.getText() != null && binding.etPurpose.getText().toString().trim().isEmpty()) {
+            binding.etPurpose.setText("Faculty guest pass");
+        }
+        binding.tilVisitDate.setVisibility(View.VISIBLE);
+        binding.llTimeSlots.setVisibility(View.VISIBLE);
+        binding.guestFormSpacer.setVisibility(View.VISIBLE);
+        binding.btnSubmit.setVisibility(View.VISIBLE);
+
+        binding.cardFacultyCarRegistration.setVisibility(View.GONE);
+        binding.tilFacultyCarPlate.setVisibility(View.GONE);
+        binding.tilFacultyCarModel.setVisibility(View.GONE);
+        binding.btnSubmitCarRequest.setVisibility(View.GONE);
+    }
+
+    private void showCarRegistration() {
+        binding.tvFacultyHeader.setText("Car Registration");
+        binding.tilGuestName.setVisibility(View.GONE);
+        binding.tilCnic.setVisibility(View.GONE);
+        binding.tilPurpose.setVisibility(View.GONE);
+        binding.tilVisitDate.setVisibility(View.GONE);
+        binding.llTimeSlots.setVisibility(View.GONE);
+        binding.guestFormSpacer.setVisibility(View.GONE);
+        binding.btnSubmit.setVisibility(View.GONE);
+
+        binding.cardFacultyCarRegistration.setVisibility(View.VISIBLE);
+        binding.tilFacultyCarPlate.setVisibility(View.VISIBLE);
+        binding.tilFacultyCarModel.setVisibility(View.VISIBLE);
+        binding.btnSubmitCarRequest.setVisibility(View.VISIBLE);
     }
 
     private void loadUserProfile() {
@@ -143,8 +219,10 @@ public class RequestSubmissionActivity extends AppCompatActivity {
         currentUserId = UserProfileUtils.resolveHostId(rollNumber, facultyId, docId);
         currentUserName = (data != null && data.get("name") != null)
                 ? data.get("name").toString() : "";
-        binding.btnSubmit.setEnabled(!currentUserId.isEmpty());
-        if (binding.btnSubmit.isEnabled()) {
+        boolean profileLoaded = !currentUserId.isEmpty();
+        binding.btnSubmit.setEnabled(profileLoaded);
+        binding.btnSubmitCarRequest.setEnabled(profileLoaded);
+        if (profileLoaded) {
             startAdHocListener();
             startOverstayListener();
         }
@@ -334,6 +412,109 @@ public class RequestSubmissionActivity extends AppCompatActivity {
         selectedStartTime = "";
         selectedEndTime = "";
         binding.btnSubmit.setEnabled(true);
+    }
+
+    private void submitCarRequest() {
+        String plate = binding.etFacultyCarPlate.getText() != null
+                ? binding.etFacultyCarPlate.getText().toString().trim().toUpperCase(Locale.ROOT)
+                : "";
+        String model = binding.etFacultyCarModel.getText() != null
+                ? binding.etFacultyCarModel.getText().toString().trim()
+                : "";
+
+        VehicleRegistrationUtils.ValidationResult validation =
+                VehicleRegistrationUtils.validateCarRequest(plate, model);
+        if (!validation.isValid()) {
+            Toast.makeText(this, validation.getMessage(), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (currentUserId.isEmpty()) {
+            Toast.makeText(this, "Your profile is still loading", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        binding.btnSubmitCarRequest.setEnabled(false);
+        checkFacultyPlateAndSubmit(plate, model);
+    }
+
+    private void checkFacultyPlateAndSubmit(String plate, String model) {
+        db.collection("car_registration_requests")
+                .whereEqualTo("licensePlate", plate)
+                .get()
+                .addOnSuccessListener(existingSnap -> {
+                    boolean hasActiveRequest = false;
+                    for (DocumentSnapshot doc : existingSnap.getDocuments()) {
+                        CarRegistrationRequest existing =
+                                doc.toObject(CarRegistrationRequest.class);
+                        if (existing != null
+                                && ("pending".equals(existing.getStatus())
+                                || "approved".equals(existing.getStatus()))) {
+                            hasActiveRequest = true;
+                            break;
+                        }
+                    }
+                    if (hasActiveRequest) {
+                        Toast.makeText(this,
+                                "This plate already has a pending or approved request",
+                                Toast.LENGTH_SHORT).show();
+                        binding.btnSubmitCarRequest.setEnabled(true);
+                        return;
+                    }
+                    checkRegisteredPlateAndSubmit(plate, model);
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    binding.btnSubmitCarRequest.setEnabled(true);
+                });
+    }
+
+    private void checkRegisteredPlateAndSubmit(String plate, String model) {
+        db.collection("cars_registered")
+                .whereEqualTo("licensePlate", plate)
+                .get()
+                .addOnSuccessListener(regSnap -> {
+                    if (!regSnap.isEmpty()) {
+                        Toast.makeText(this,
+                                "License plate already registered in the system",
+                                Toast.LENGTH_SHORT).show();
+                        binding.btnSubmitCarRequest.setEnabled(true);
+                        return;
+                    }
+                    saveCarRequest(plate, model);
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    binding.btnSubmitCarRequest.setEnabled(true);
+                });
+    }
+
+    private void saveCarRequest(String plate, String model) {
+        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "";
+        CarRegistrationRequest request = new CarRegistrationRequest(
+                "", uid, currentUserName, currentUserId, "faculty",
+                plate, model, "pending", Timestamp.now()
+        );
+
+        db.collection("car_registration_requests").add(request)
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "Car request submitted — pending admin approval",
+                            Toast.LENGTH_SHORT).show();
+                    clearCarForm();
+                    binding.btnSubmitCarRequest.setEnabled(true);
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    binding.btnSubmitCarRequest.setEnabled(true);
+                });
+    }
+
+    private void clearCarForm() {
+        if (binding.etFacultyCarPlate.getText() != null) {
+            binding.etFacultyCarPlate.getText().clear();
+        }
+        if (binding.etFacultyCarModel.getText() != null) {
+            binding.etFacultyCarModel.getText().clear();
+        }
     }
 
     @Override

@@ -10,24 +10,27 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/white"
-        app:elevation="0dp">
+        android:background="@color/campus_blue_primary"
+        app:elevation="0dp"
+        app:liftOnScroll="false"
+        android:stateListAnimator="@null">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_menu"
+            android:layout_height="91dp"
             app:title="Audit Logs"
-            app:titleCentered="true" />
+            app:titleCentered="true"
+            app:titleTextColor="@color/white" />
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:tabIndicatorColor="@color/campus_blue_primary"
-            app:tabSelectedTextColor="@color/campus_blue_primary"
-            app:tabTextColor="@color/text_color_secondary">
+            android:background="@color/campus_blue_primary"
+            app:tabIndicatorColor="@color/white"
+            app:tabSelectedTextColor="@color/white"
+            app:tabTextColor="@color/campus_blue_light">
 
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
@@ -37,12 +40,17 @@
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Flagged" />
+                android:text="Overstaying" />
 
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Overstaying" />
+                android:text="Zone Logs" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Delivery Logs" />
         </com.google.android.material.tabs.TabLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -77,5 +85,17 @@
             tools:listitem="@layout/item_audit_log" />
 
     </LinearLayout>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/white"
+        android:visibility="gone"
+        app:itemIconTint="@color/nav_item_selector"
+        app:itemTextColor="@color/nav_item_selector"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/guard_bottom_nav_menu" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

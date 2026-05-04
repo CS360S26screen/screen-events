@@ -51,6 +51,10 @@
             android:exported="false"
             android:label="Audit Trail" />
         <activity
+            android:name=".AdminBlacklistActivity"
+            android:exported="false"
+            android:label="Blacklist" />
+        <activity
             android:name=".GuardDashboardActivity"
             android:exported="false"
             android:label="Guard Dashboard" />
@@ -58,6 +62,18 @@
             android:name=".FacultyRequestsActivity"
             android:exported="false"
             android:label="My Requests" />
+        <activity
+            android:name=".WingAccessRequestActivity"
+            android:exported="false"
+            android:label="Wing Access Request" />
+        <activity
+            android:name=".AdminWingAccessActivity"
+            android:exported="false"
+            android:label="Wing Access Management" />
+        <activity
+            android:name=".WingScannerActivity"
+            android:exported="false"
+            android:label="Wing Scanner" />
     </application>
 
 </manifest>

@@ -1,6 +1,7 @@
 package com.example.se_proj.rules;
 
 import com.example.se_proj.models.VisitorRequest;
+import com.example.se_proj.models.ZoneAccessLog;
 
 import org.junit.Test;
 
@@ -12,6 +13,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -204,6 +206,51 @@ public class UserStoryAcceptanceTest {
         );
 
         assertTrue(RequestValidationUtils.hasBlockingStudentPass(Arrays.asList(pendingExisting)));
+    }
+
+    // ---------- Zone Access Logging stories (US18) ----------
+
+    @Test
+    public void zoneAccessLog_preservesTimestampLocationAndGuardId() {
+        ZoneAccessLog log = new ZoneAccessLog(
+                "3520212345671",
+                ZoneAccessLogger.ENTITY_TYPE_PERSON,
+                "John Doe",
+                "main_gate",
+                ZoneAccessLog.ACTION_ENTRY,
+                ZoneAccessLog.OUTCOME_SUCCESS,
+                "",
+                "guard-123",
+                "req-456"
+        );
+
+        assertEquals("main_gate", log.getZoneId());
+        assertEquals("guard-123", log.getGuardId());
+        assertNotNull(log.getTimestamp());
+        assertEquals("3520212345671", log.getEntityId());
+    }
+
+    @Test
+    public void zoneAccessLog_toAuditLogMapping_isCorrect() {
+        ZoneAccessLog log = new ZoneAccessLog(
+                "3520212345671",
+                ZoneAccessLogger.ENTITY_TYPE_PERSON,
+                "John Doe",
+                "gate_01",
+                ZoneAccessLog.ACTION_DENIED,
+                ZoneAccessLog.OUTCOME_FAILURE,
+                "Blacklisted",
+                "guard-1",
+                ""
+        );
+
+        com.example.se_proj.models.AuditLog auditLog = AuditLogUtils.toZoneAccessAuditLog(log);
+
+        // mapping convention uses hostId for location display in the existing AuditLog model
+        assertEquals("gate_01", auditLog.getHostId());
+        assertEquals("John Doe", auditLog.getVisitorName());
+        assertTrue(auditLog.getReason().contains("Blacklisted"));
+        assertTrue(auditLog.getReason().contains("gate_01"));
     }
 
     private static VisitorRequest request(

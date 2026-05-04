@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="8dp"
+    android:backgroundTint="#FFFFFF"
+    app:cardBackgroundColor="#FFFFFF"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="1dp"
+    app:strokeColor="#ECEFF4"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvPendingPlate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter_variablefont_opsz_wght"
+                android:textColor="@color/text_color_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="ABC-1234" />
+
+            <TextView
+                android:id="@+id/tvPendingModel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/inter_variablefont_opsz_wght"
+                android:textColor="@color/text_color_secondary"
+                android:textSize="13sp"
+                tools:text="Honda Civic 2019" />
+
+        </LinearLayout>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipPendingStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:fontFamily="@font/inter_variablefont_opsz_wght"
+            app:chipStrokeWidth="0dp"
+            tools:text="PENDING" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancelRequest"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter_variablefont_opsz_wght"
+            android:minWidth="0dp"
+            android:paddingHorizontal="8dp"
+            android:text="Cancel"
+            android:textAllCaps="false"
+            android:textColor="@color/status_alert_red" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
