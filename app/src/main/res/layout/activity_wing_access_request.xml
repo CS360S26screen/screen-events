@@ -53,42 +53,10 @@
                     android:orientation="vertical"
                     android:padding="22dp">
 
-                    <!-- Mode toggle -->
-                    <com.google.android.material.button.MaterialButtonToggleGroup
-                        android:id="@+id/toggleRequestMode"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:checkedButton="@id/btnModeMyself"
-                        app:selectionRequired="true"
-                        app:singleSelection="true">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnModeMyself"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="42dp"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/inter_variablefont_opsz_wght"
-                            android:text="For Myself"
-                            android:textAllCaps="false" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnModeOnBehalf"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="42dp"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/inter_variablefont_opsz_wght"
-                            android:text="On Behalf"
-                            android:textAllCaps="false" />
-                    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-                    <!-- Self fields (shown when For Myself is selected) -->
                     <LinearLayout
                         android:id="@+id/llSelfFields"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="18dp"
                         android:orientation="vertical">
 
                         <TextView
@@ -109,83 +77,6 @@
                             android:textSize="15sp"
                             android:textStyle="bold"
                             tools:text="21K-1234" />
-                    </LinearLayout>
-
-                    <!-- On-behalf fields (shown when On Behalf is selected) -->
-                    <LinearLayout
-                        android:id="@+id/llOnBehalfFields"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="18dp"
-                        android:orientation="vertical"
-                        android:visibility="gone">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/inter_variablefont_opsz_wght"
-                            android:text="Student Full Name"
-                            android:textColor="#586174"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/tilStudentName"
-                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:hint="Student Full Name"
-                            app:boxBackgroundColor="#FAFBFD"
-                            app:boxCornerRadiusBottomEnd="14dp"
-                            app:boxCornerRadiusBottomStart="14dp"
-                            app:boxCornerRadiusTopEnd="14dp"
-                            app:boxCornerRadiusTopStart="14dp"
-                            app:boxStrokeColor="#DDE2EA"
-                            app:hintTextColor="#9AA4B8">
-
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etStudentName"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/inter_variablefont_opsz_wght"
-                                android:inputType="textPersonName"
-                                android:paddingVertical="18dp" />
-                        </com.google.android.material.textfield.TextInputLayout>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="22dp"
-                            android:fontFamily="@font/inter_variablefont_opsz_wght"
-                            android:text="Student Roll Number"
-                            android:textColor="#586174"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/tilStudentRoll"
-                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:hint="Student Roll Number"
-                            app:boxBackgroundColor="#FAFBFD"
-                            app:boxCornerRadiusBottomEnd="14dp"
-                            app:boxCornerRadiusBottomStart="14dp"
-                            app:boxCornerRadiusTopEnd="14dp"
-                            app:boxCornerRadiusTopStart="14dp"
-                            app:boxStrokeColor="#DDE2EA"
-                            app:hintTextColor="#9AA4B8">
-
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etStudentRoll"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/inter_variablefont_opsz_wght"
-                                android:inputType="text"
-                                android:paddingVertical="18dp" />
-                        </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
                     <TextView

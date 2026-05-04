@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.se_proj.databinding.ActivityWingAccessRequestBinding;
 import com.example.se_proj.models.WingAccessRequest;
+import com.example.se_proj.rules.UserProfileUtils;
 import com.example.se_proj.rules.WingConstants;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
@@ -18,14 +19,12 @@ import com.google.firebase.firestore.FirebaseFirestore;
 /**
  * Wing/lab access request screen for students and faculty.
  *
- * <p>Students request access for themselves; their roll number and name are auto-filled
- * from their profile after {@link #loadUserProfile()} completes. The submit button is
- * disabled until the profile has loaded to prevent the "still loading" race condition.</p>
+ * <p>Students request wing access for themselves; their roll number and name are auto-filled
+ * from their Firestore profile after {@link #loadUserProfile()} completes. The submit button
+ * is disabled until the profile has loaded to prevent a race condition.</p>
  *
- * <p>Faculty may switch to "On Behalf" mode and supply target student details manually.
- * All requests require a stated reason which is stored on the {@link WingAccessRequest}.</p>
- *
- * <p>Submitted requests appear in admin's Wing Access Management screen for approval.</p>
+ * <p>A reason is required. Submitted requests appear in admin's Wing Access Management
+ * screen for approval.</p>
  */
 public class WingAccessRequestActivity extends AppCompatActivity {
 
@@ -33,11 +32,8 @@ public class WingAccessRequestActivity extends AppCompatActivity {
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private final FirebaseAuth auth = FirebaseAuth.getInstance();
 
-    private String userRole = "student";
     private String userRollNo = "";
     private String userName = "";
-    private String userFacultyId = "";
-    private boolean onBehalfMode = false;
     private boolean profileLoaded = false;
 
     @Override
@@ -72,26 +68,7 @@ public class WingAccessRequestActivity extends AppCompatActivity {
                 android.R.layout.simple_dropdown_item_1line, WingConstants.ALL_WINGS);
         binding.actvWing.setAdapter(wingAdapter);
 
-        // Disable submit until profile is loaded
         binding.btnSubmitWingRequest.setEnabled(false);
-
-        binding.toggleRequestMode.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
-            if (!isChecked) return;
-            if (checkedId == R.id.btnModeMyself) {
-                onBehalfMode = false;
-                binding.llOnBehalfFields.setVisibility(View.GONE);
-                binding.llSelfFields.setVisibility(View.VISIBLE);
-            } else if (checkedId == R.id.btnModeOnBehalf) {
-                if (profileLoaded && !"faculty".equals(userRole)) {
-                    binding.toggleRequestMode.check(R.id.btnModeMyself);
-                    return;
-                }
-                onBehalfMode = true;
-                binding.llSelfFields.setVisibility(View.GONE);
-                binding.llOnBehalfFields.setVisibility(View.VISIBLE);
-            }
-        });
-
         loadUserProfile();
         binding.btnSubmitWingRequest.setOnClickListener(v -> submitRequest());
     }
@@ -109,25 +86,15 @@ public class WingAccessRequestActivity extends AppCompatActivity {
                         Toast.makeText(this, "User profile not found", Toast.LENGTH_LONG).show();
                         return;
                     }
-                    String role = doc.getString("role");
-                    userRole = role != null ? role : "student";
-
-                    if ("faculty".equals(userRole)) {
-                        String fId = doc.getString("facultyId");
-                        userFacultyId = fId != null ? fId : "";
-                        String n = doc.getString("name");
-                        userName = n != null ? n : "";
-                        binding.btnModeOnBehalf.setVisibility(View.VISIBLE);
-                    } else {
-                        String roll = doc.getString("rollNumber");
-                        if (roll == null) roll = doc.getString("studentId");
-                        userRollNo = roll != null ? roll : "";
-                        String n = doc.getString("name");
-                        userName = n != null ? n : "";
-                        binding.tvSelfRollDisplay.setText(userRollNo);
-                        binding.btnModeOnBehalf.setVisibility(View.VISIBLE);
-                    }
-
+                    String n = doc.getString("name");
+                    userName = n != null ? n : "";
+                    userRollNo = UserProfileUtils.resolveHostId(
+                            doc.getString("rollNumber"),
+                            doc.getString("studentId"),
+                            doc.getId(),
+                            doc.getString("email")
+                    );
+                    binding.tvSelfRollDisplay.setText(userRollNo);
                     profileLoaded = true;
                     binding.btnSubmitWingRequest.setEnabled(true);
                 })
@@ -157,38 +124,17 @@ public class WingAccessRequestActivity extends AppCompatActivity {
             return;
         }
 
-        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "";
-        String studentRoll;
-        String studentName;
-        String requesterType;
-        String facultyId;
-
-        if (onBehalfMode) {
-            studentName = binding.etStudentName.getText() != null
-                    ? binding.etStudentName.getText().toString().trim() : "";
-            studentRoll = binding.etStudentRoll.getText() != null
-                    ? binding.etStudentRoll.getText().toString().trim() : "";
-            requesterType = "faculty";
-            facultyId = userFacultyId;
-            if (studentName.isEmpty() || studentRoll.isEmpty()) {
-                Toast.makeText(this, "Please fill in all student details", Toast.LENGTH_SHORT).show();
-                return;
-            }
-        } else {
-            studentRoll = userRollNo;
-            studentName = userName;
-            requesterType = "student";
-            facultyId = "";
-            if (studentRoll.isEmpty()) {
-                Toast.makeText(this, "Your roll number is missing — contact support",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
+        if (userRollNo.isEmpty()) {
+            Toast.makeText(this, "Your roll number is missing — contact support",
+                    Toast.LENGTH_SHORT).show();
+            return;
         }
 
+        String uid = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "";
+
         WingAccessRequest request = new WingAccessRequest(
-                "", studentRoll, studentName, wing,
-                uid, requesterType, facultyId, "pending", reason, Timestamp.now()
+                "", userRollNo, userName, wing,
+                uid, "student", "", "pending", reason, Timestamp.now()
         );
 
         binding.btnSubmitWingRequest.setEnabled(false);
@@ -213,7 +159,5 @@ public class WingAccessRequestActivity extends AppCompatActivity {
     private void clearForm() {
         binding.actvWing.setText("", false);
         if (binding.etReason.getText() != null) binding.etReason.getText().clear();
-        if (binding.etStudentName.getText() != null) binding.etStudentName.getText().clear();
-        if (binding.etStudentRoll.getText() != null) binding.etStudentRoll.getText().clear();
     }
 }
